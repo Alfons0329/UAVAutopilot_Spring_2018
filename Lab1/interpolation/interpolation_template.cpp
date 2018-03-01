@@ -39,7 +39,16 @@ int main(int argc, char** argv)
 
 void bilinear_interpolation(Mat& input, Mat& output, float scalingFactor)
 {
+	int origin_row, origin_col;
+	for(int i = 0;i < output.row; i++)
+	{
+		for(int j = 0;j < output.col ;j++)
+		{
+			//project to the original axis
+			origin_row = i / scalingFactor;
+			origin_col = j / scalingFactor;
 
+		}
+	}
 	// write down your code here
-
 }
