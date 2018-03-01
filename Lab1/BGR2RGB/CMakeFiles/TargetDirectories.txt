@@ -1,0 +1,3 @@
+/home/alfons/Desktop/Programming/UAVAutopilot_Spring_2018/Lab1/BGR2RGB/CMakeFiles/rebuild_cache.dir
+/home/alfons/Desktop/Programming/UAVAutopilot_Spring_2018/Lab1/BGR2RGB/CMakeFiles/edit_cache.dir
+/home/alfons/Desktop/Programming/UAVAutopilot_Spring_2018/Lab1/BGR2RGB/CMakeFiles/bgr2rgb_template.dir

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( bgr2rgb_template )
+find_package( OpenCV REQUIRED )
+add_executable( bgr2rgb_template bgr2rgb_template.cpp )
+target_link_libraries( bgr2rgb_template ${OpenCV_LIBS} )
