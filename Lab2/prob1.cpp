@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 
   return 0;
 }
+
 void histogram_equal(Mat& input, Mat& output)
 {
     vector<int> hash_distribution;
@@ -52,19 +53,13 @@ void histogram_equal(Mat& input, Mat& output)
             cumulative_cnt += (double) hash_distribution[i] / (double)(input.rows * input.cols);
             cnt += hash_distribution[i];
             intensity_cdf[i] = cumulative_cnt;
-            cout<<"cnt "<<cnt<<" at "<< i<<" Cumulate to "<<cumulative_cnt<<" where intensity is now "<<intensity_cdf[i]<<endl;
         }
     }
     for(int i=0;i<input.rows;i++)
     {
         for(int j=0;j<input.cols;j++)
         {
-            // cout<<" input graph value "
-            // <<(int)input.at<uchar>(i,j)<<" with intensity_cdf "<<intensity_cdf[input.at<uchar>(i,j)]
-            // <<" and output value is "<<intensity_cdf[input.at<uchar>(i,j)] * max_value<<endl;
-            // cout<<" count we have "<<hash_distribution[input.at<uchar>(i,j)]<<endl;
             output.at<uchar>(i,j) = (intensity_cdf[input.at<uchar>(i,j)] * max_value );
         }
     }
-
 }
