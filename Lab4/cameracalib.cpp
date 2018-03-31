@@ -33,6 +33,7 @@ int main(int argc, char const *argv[])
         while(1) //capturing the image for calibration
         {
             int key = waitKey(1) & 0xFF;
+            printf("Keyval %d\n",key);
             if (key == 27) break;
 
             camera >> frame;
@@ -64,7 +65,7 @@ int main(int argc, char const *argv[])
             imshow("Doing calibration ",frame);
         }
 
-        if(images.size() >= 20)
+        if(images.size() >= 2)
         {
             cout<<"Sample enough, doing calibration "<<endl;
             vector<vector<Point3f> > all3d_points;
@@ -74,19 +75,23 @@ int main(int argc, char const *argv[])
                 vector<Point3f> one3d_points;
                 vector<Point2f> one2d_points; //more detailed points to be output for more precise calibration
 
-                cornerSubPix(images[i], one2d_points, cvSize(8, 8), cvSize(-1, -1), TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 50, 0.1));
-                all2d_points.push_back(one2d_points);
-
-                for(int j = 0;j < mychessboard.height;j++) //put into real world 3d space with z axis being 0 and unit as millimeter
+                if(findChessboardCorners(images[i], mychessboard, one2d_points)) //if found and put here, without this will cause segfault of finding nonchessboard objects
                 {
-                    for(int k = 0;k < mychessboard.width;k++)
-                    {
-                        one3d_points.push_back(Point3f((float) j * EDGE_LEN,(float) k * EDGE_LEN, 0.0f));
-                    }
-                }
-                all3d_points.push_back(one3d_points); //push back to the real world coordinate
-            }
+                    cornerSubPix(images[i], one2d_points, cvSize(8, 8), cvSize(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 50, 0.1));
+                    all2d_points.push_back(one2d_points);
 
+                    for(int j = 0;j < mychessboard.height;j++) //put into real world 3d space with z axis being 0 and unit as millimeter
+                    {
+                        for(int k = 0;k < mychessboard.width;k++)
+                        {
+                            cout<<"Push back  j  "<<j<<"  k  "<<k<<endl;
+                            one3d_points.push_back(Point3f((float) j * EDGE_LEN,(float) k * EDGE_LEN, 0.0f));
+                        }
+                    }
+                    all3d_points.push_back(one3d_points); //push back to the real world coordinate
+                }
+            }
+            cout<<"3D Points size "<<all3d_points.size()<<" 2d points size "<<all2d_points.size()<<endl;
             vector<Mat> rvec, tvec; //radial vector and tangantial vectors in the correction math expression
             calibrateCamera(all3d_points, all2d_points, images[0].size(), camera_matrix, distortion_coef, rvec, tvec);
 
