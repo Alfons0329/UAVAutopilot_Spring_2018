@@ -12,10 +12,10 @@ const float EDGE_LEN = 22;
 const int COLS = 9;
 const int ROWS = 6;
 
-Size mychessboard(COLS, ROWS);
 
 int main(int argc, char const *argv[])
 {
+    const Size mychessboard(COLS, ROWS);
     VideoCapture camera(0);
     Mat frame;
     vector<Mat> images;
@@ -67,7 +67,7 @@ int main(int argc, char const *argv[])
 
         if(images.size() >= 2)
         {
-            cout<<"Sample enough, doing calibration "<<endl;
+            cout<<"Sample enough, doing calibration total img "<<images.size()<<endl;
             vector<vector<Point3f> > all3d_points;
             vector<vector<Point2f> > all2d_points;
             for(int i = 0;i < images.size();i++) //calibrate pic by pic
@@ -75,11 +75,14 @@ int main(int argc, char const *argv[])
                 vector<Point3f> one3d_points;
                 vector<Point2f> one2d_points; //more detailed points to be output for more precise calibration
 
-                if(findChessboardCorners(images[i], mychessboard, one2d_points)) //if found and put here, without this will cause segfault of finding nonchessboard objects
+                bool found = findChessboardCorners(images[i], mychessboard, one2d_points);
+                if(found) //if found and put here, without this will cause segfault of finding nonchessboard objects
                 {
+                    cout<<"Found a chessboard pattern , use it to do calibration "<<endl;
                     cornerSubPix(images[i], one2d_points, cvSize(8, 8), cvSize(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 50, 0.1));
                     all2d_points.push_back(one2d_points);
 
+                    cout<<"HEIGHT "<<mychessboard.height<<" WIDTH "<<mychessboard.width<<endl;
                     for(int j = 0;j < mychessboard.height;j++) //put into real world 3d space with z axis being 0 and unit as millimeter
                     {
                         for(int k = 0;k < mychessboard.width;k++)
