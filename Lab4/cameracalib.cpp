@@ -50,23 +50,23 @@ int main(int argc, char const *argv[])
             bool found = findChessboardCorners(frame, mychessboard, corners, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_FAST_CHECK);
             if(found)
             {
-                cout<<"Corners of chessboard are: ";
-                for(auto it = corners.begin(); it != corners.end(); ++it )
-                {
-                    cout<<*it<<" ";
-                }
                 drawChessboardCorners(frame, mychessboard, corners, found);
                 if(key == 32)
                 {
+                    cout<<"Corners of chessboard are: ";
+                    for(auto it = corners.begin(); it != corners.end(); ++it )
+                    {
+                        cout<<*it<<" ";
+                    }
                     images.push_back(frame);
                 }
             }
             imshow("Doing calibration ",frame);
         }
 
-        cout<<"Sample enough, doing calibration "<<endl;
         if(images.size() >= 20)
         {
+            cout<<"Sample enough, doing calibration "<<endl;
             vector<vector<Point3f> > all3d_points;
             vector<vector<Point2f> > all2d_points;
             for(int i = 0;i < images.size();i++) //calibrate pic by pic
