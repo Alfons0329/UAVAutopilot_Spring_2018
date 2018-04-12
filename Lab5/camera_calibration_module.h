@@ -16,7 +16,7 @@ using namespace cv;
 // Description  : This is the entry point of the program.
 // Return value : SUCCESS:0  ERROR:-1
 // --------------------------------------------------------------------------
-void camera_calibration(cv::Mat cameraMatrix, cv::Mat distCoeffs;)
+void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs;)
 {
 
         if(argc != 2)
@@ -52,7 +52,6 @@ void camera_calibration(cv::Mat cameraMatrix, cv::Mat distCoeffs;)
                 if (key == 27) break;
 
                 // Get an image
-    	        //frame = cap.read();
                 cap >> frame;
 
                 // Convert to grayscale
