@@ -74,8 +74,8 @@ int main(int argc, char const *argv[])
             {
                 vector<Point3f> one3d_points;
                 vector<Point2f> one2d_points; //more detailed points to be output for more precise calibration
-
-                bool found = findChessboardCorners(images[i], mychessboard, one2d_points);
+                cout<<"Process image no. "<<i<<endl;
+                bool found = findChessboardCorners(images[i], mychessboard, one2d_points,  CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_FAST_CHECK);
                 if(found) //if found and put here, without this will cause segfault of finding nonchessboard objects
                 {
                     cout<<"Found a chessboard pattern , use it to do calibration "<<endl;
