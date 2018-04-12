@@ -112,6 +112,9 @@ void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs,string nam
                         corners3D.push_back(tmp_corners3D);
                     }
                 }
+
+                // Estimate camera parameters
+                //cv::Mat cameraMatrix, distCoeffs;
                 std::vector<cv::Mat> rvec, tvec;
                 cv::calibrateCamera(corners3D, corners2D, images[0].size(), cameraMatrix, distCoeffs, rvec, tvec);
                 std::cout << cameraMatrix << std::endl;
