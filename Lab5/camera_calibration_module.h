@@ -16,23 +16,19 @@ using namespace cv;
 // Description  : This is the entry point of the program.
 // Return value : SUCCESS:0  ERROR:-1
 // --------------------------------------------------------------------------
-void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs;)
+void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs,string name_in)
 {
 
-        if(argc != 2)
-        {
-            cout << "[Usage] ./calib <XML FILE>" << endl;
-            return 0;
-        }
 
-        // Images
-        VideoCapture cap(0);
+
+        // Images 0 for built-in camera and 1 for the external camera
+        VideoCapture cap(1);
         Mat frame;
         //Mat frame = cap.read();
         cap >> frame;
     	// Open XML file
         cout << frame.size() << endl;
-        string filename(argv[1]);
+        string filename(name_in );
         FileStorage fs(filename, FileStorage::READ);
 
         // Not found
@@ -48,7 +44,6 @@ void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs;)
             {
                 // Key iput
                 int key = waitKey(1) & 0xFF;
-                printf("Keyval %d\n",key);
                 if (key == 27) break;
 
                 // Get an image
