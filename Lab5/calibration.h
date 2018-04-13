@@ -27,7 +27,7 @@ void my_camera_calibration(cv::Mat& cameraMatrix, cv::Mat& distCoeffs,string nam
         //Mat frame = cap.read();
         cap >> frame;
     	// Open XML file
-        cout << frame.size() << endl;
+        // cout << frame.size() << endl;
         string filename(name_in );
         FileStorage fs(filename, FileStorage::READ);
 
