@@ -24,7 +24,7 @@ const float markerLength = 7.05f;
 
 void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
 {
-        // Images 0 for built-in camera and 1 for the external camera
+        // image_buffer_vector 0 for built-in camera and 1 for the external camera
         // VideoCapture cap(0);
         //Mat image = cap.read();
         // cap >> image;
@@ -44,7 +44,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
         if (1)
         {
             // Image buffer
-            vector<Mat> images;
+            vector<Mat> image_buffer_vector;
             cout << "Press Space key to capture an image" << endl;
             cout << "Press Esc to exit" << endl;
 
@@ -77,35 +77,35 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
                     if (key == ' ')
                     {
                         // Add to buffer
-                        images.push_back(gray);
+                        image_buffer_vector.push_back(gray);
                     }
                 }
 
                 // Show the image
                 ostringstream stream;
-                stream << "Captured " << images.size() << " image(s).";
+                stream << "Captured " << image_buffer_vector.size() << " image(s).";
                 putText(image, stream.str(), Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 1, 1);
                 imshow("Camera Calibration", image);
             }
 
             // We have enough samples
-            if (images.size() > 4)
+            if (image_buffer_vector.size() > 4)
             {
                 Size size(PAT_COLS, PAT_ROWS);
                 vector< vector<Point2f> > corners2D;
                 vector< vector<Point3f> > corners3D;
 
-                for (size_t i = 0; i < images.size(); i++)
+                for (size_t i = 0; i < image_buffer_vector.size(); i++)
                 {
                     // Detect a chessboard
                     vector<Point2f> tmp_corners2D;
-                    bool found = findChessboardCorners(images[i], size, tmp_corners2D);
+                    bool found = findChessboardCorners(image_buffer_vector[i], size, tmp_corners2D);
 
                     // Chessboard detected
                     if (found)
                     {
                         // Convert the corners to sub-pixel
-                        cornerSubPix(images[i], tmp_corners2D, cvSize(11, 11), cvSize(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 30, 0.1));
+                        cornerSubPix(image_buffer_vector[i], tmp_corners2D, cvSize(11, 11), cvSize(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 30, 0.1));
                         corners2D.push_back(tmp_corners2D);
 
                         // Set the 3D position of patterns
@@ -125,7 +125,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
                 // Estimate camera parameters
                 //Mat cameraMatrix, distCoeffs;
                 vector<Mat> rvec, tvec;
-                calibrateCamera(corners3D, corners2D, images[0].size(), cameraMatrix, distCoeffs, rvec, tvec);
+                calibrateCamera(corners3D, corners2D, image_buffer_vector[0].size(), cameraMatrix, distCoeffs, rvec, tvec);
                 cout << cameraMatrix << endl;
                 cout << distCoeffs << endl;
 
@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
     Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250); //just this
 
     vector<int> ids; //aruco markers
-    vector<vector<Point2f> > corners; //aruco corners
+    vector<vector<Point2f> > aruco_corners; //aruco corners
     //-----------------------done data structure init------------------------------------------//
     //
     getchar();// stop a while for changing paper lololol
@@ -253,13 +253,13 @@ int main(int argc, char *argv[])
         imshow("camera", image);
 
         //---------------------------------Main part of market detection----------------------------------------------//
-        aruco::detectMarkers(image, dictionary, corners, ids);
+        aruco::detectMarkers(image, dictionary, aruco_corners, ids);
            // if at least one marker detected
         if (ids.size() > 0)
         {
-            aruco::drawDetectedMarkers(image, corners, ids);
+            aruco::drawDetectedMarkers(image, aruco_corners, ids);
             vector<Vec3d> rvecs, tvecs;
-            aruco::estimatePoseSingleMarkers(corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
+            aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
             // draw axis for each marker
             //the more the last coefficient , the more obviously the axis will be drawn
             for(int i = 0;i < ids.size(); i++)
