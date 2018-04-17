@@ -22,19 +22,20 @@ using namespace cv;
 const float markerLength = 7.05f;
 //------------------Marker dection board constants end here-----------------//
 
+// AR.Drone class
+ARDrone ardrone;
+
 void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
 {
         // image_buffer_vector 0 for built-in camera and 1 for the external camera
         // VideoCapture cap(0);
         //Mat image = cap.read();
         // cap >> image;
-    	// Open XML file
+        // Open XML file
         // cout << image.size() << endl;
         //-------------------------------Data structure init-------------------------//
         Mat image;
 
-        // AR.Drone class
-        ARDrone ardrone;
 
         string filename(name_in );
         FileStorage fs(filename, FileStorage::READ);
@@ -99,7 +100,9 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
                 {
                     // Detect a chessboard
                     vector<Point2f> tmp_corners2D;
-                    bool found = findChessboardCorners(image_buffer_vector[i], size, tmp_corners2D);
+                    // imshow("Haha", image_buffer_vector[i]);
+                    // getchar();
+                    bool found = findChessboardCorners(image_buffer_vector[i], size, tmp_corners2D, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_FAST_CHECK);
 
                     // Chessboard detected
                     if (found)
@@ -173,7 +176,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
 int main(int argc, char *argv[])
 {
     // AR.Drone class
-    ARDrone ardrone;
+    //ARDrone ardrone;
 
     // Initialize
     if (!ardrone.open())
@@ -211,7 +214,6 @@ int main(int argc, char *argv[])
     my_camera_calibration(cameraMatrix, distCoeffs, "config.xml");
     //-----------------------drone aruco checking and detection data structure init------------------------------//
     Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250); //just this
-
     vector<int> ids; //aruco markers
     vector<vector<Point2f> > aruco_corners; //aruco corners
     //-----------------------done data structure init------------------------------------------//
