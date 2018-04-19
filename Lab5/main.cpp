@@ -1,4 +1,5 @@
 #include "ardrone/ardrone.h"
+#include "pid.hpp"
 // #include "calibration.h" I dorectly write in this file
 #include "opencv2/opencv.hpp"
 #include <opencv2/aruco.hpp>
@@ -6,6 +7,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+
+#include <cstring>
 
 #define PAT_ROWS   (6)                  // Rows of pattern
 #define PAT_COLS   (9)                 // Columns of pattern
@@ -79,6 +82,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
                     {
                         // Add to buffer
                         image_buffer_vector.push_back(gray);
+                        // imshow("Haha this image", image_buffer_vector[image_buffer_vector.size() - 1]);
                     }
                 }
 
@@ -145,34 +149,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
             // Destroy windows
             destroyAllWindows();
         }
-        /*
-        // Load camera parameters
-
-        fs["intrinsic"] >> cameraMatrix;
-        fs["distortion"] >> distCoeffs;
-
-        // Create undistort map
-        Mat mapx, mapy;
-        initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(), cameraMatrix, image.size(), CV_32FC1, mapx, mapy);
-
-        // Main loop
-        while (1)
-        {
-            // Key input
-            int key = waitKey(33);
-            if (key == 0x41) break;
-            Mat image_raw;
-            cap >> image_raw;
-
-            // Undistort
-            Mat image;
-            remap(image_raw, image, mapx, mapy, INTER_LINEAR);
-
-            // Display the image
-            imshow("camera", image);
-        }*/
 }
-
 int main(int argc, char *argv[])
 {
     // AR.Drone class
@@ -257,10 +234,10 @@ int main(int argc, char *argv[])
         //---------------------------------Main part of market detection----------------------------------------------//
         aruco::detectMarkers(image, dictionary, aruco_corners, ids);
            // if at least one marker detected
+        vector<Vec3d> rvecs, tvecs;
         if (ids.size() > 0)
         {
             aruco::drawDetectedMarkers(image, aruco_corners, ids);
-            vector<Vec3d> rvecs, tvecs;
             aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
             // draw axis for each marker
             //the more the last coefficient , the more obviously the axis will be drawn
@@ -271,7 +248,89 @@ int main(int argc, char *argv[])
             }
         }
         imshow("Aruco Market Axis", image);
-        waitKey(100);
+        if (key == -1 && tvecs.size())
+        {
+    		//---------------------------------Main part of market detection----------------------------------------------//
+            // aruco::detectMarkers(image, dictionary, aruco_corners, ids);
+            //    // if at least one marker detected
+            // vector<Vec3d> rvecs, tvecs;
+            // if (ids.size() > 0)
+            // {
+            //     aruco::drawDetectedMarkers(image, aruco_corners, ids);
+            //
+            //     aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
+            //     // draw axis for each marker
+            //     //the more the last coefficient , the more obviously the axis will be drawn
+            //     for(int i = 0;i < ids.size(); i++)
+            //     {
+            //         aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
+            //         cout<<"Detected ArUco markers "<<ids.size()<< "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+            //     }
+            // }
+            // imshow("Aruco Market Axis", image);
+
+            PIDManager myPID("pid.yaml");
+            //myPID.importCoeffsFromFile("pid.yaml");
+            // implement your autopilot algorithm here
+    		// only need to modify vx, vy, vz, vr
+
+            double previous_error_x = 0;
+            double integral_x = 0;
+            double previous_error_y = 0;
+            double integral_y = 0;
+            double previous_error_z = 0;
+            double integral_z = 0;
+            double previous_error_r = 0;
+            double integral_r = 0;
+
+            double dt_x = 0.1;
+            double dt_r = 0.1;
+
+
+
+            double actual_x = tvecs[0][2];
+            double error_x = 80 - actual_x;
+            integral_x = integral_x + error_x*dt_x;
+            double derivative_x = (error_x - previous_error_x)/dt_x;
+            double output_x = myPID.mX.at<double>(0, 0)*error_x + myPID.mX.at<double>(1, 0)*integral_x + myPID.mX.at<double>(2, 0)*derivative_x;
+            previous_error_x = error_x;
+
+            //myPID.setThrottleLevel(output_x);
+            // wait((int)dt_x);
+            double actual_r = tvecs[0][2];
+            double error_r = 80 - actual_r;
+            integral_r = integral_r + error_r*dt_r;
+            double derivative_r = (error_r - previous_error_r)/dt_r;
+            double output_r = myPID.mR.at<double>(0, 0)*error_r + myPID.mR.at<double>(1, 0)*integral_r + myPID.mR.at<double>(2, 0)*derivative_r;
+            previous_error_r = error_r;
+
+            //myPID.setThrottleLevel(output_r);
+            // wait((int)dt_r);
+            double error_y = 0;
+            double error_z = 0;
+            Mat input = Mat::zeros(4, 1, CV_64F);
+            Mat out = Mat::zeros(4, 1, CV_64F);
+            out.at<double>(0, 0) = error_x;
+            out.at<double>(1, 0) = error_y;
+            out.at<double>(2, 0) = error_z;
+            out.at<double>(3, 0) = error_r;
+            myPID.getCommand(input, out);
+            cout << out.at<double>(0, 0) << ", " << out.at<double>(3, 0);
+
+
+            if(out.at<double>(0, 0) <= 0.5 && out.at<double>(0, 0) >= -0.5)
+                vx = 0;
+            else if(out.at<double>(0, 0) < -0.5){
+                vx = 1;
+            }
+            else{
+                vx = -1;
+            }
+
+	   }
+
+	   ardrone.move3D(vx, vy, vz, vr);
+       waitKey(100);
     }
     // See you
     ardrone.close();
