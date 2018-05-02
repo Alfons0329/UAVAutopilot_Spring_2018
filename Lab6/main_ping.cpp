@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 	vector<vector<Point2f> > aruco_corners; //aruco corners
 	//-----------------------done data structure init------------------------------------------//
 	//
-	PIDManager myPID("pid.yanl");
+	PIDManager myPID("pid.yaml");
 	getchar();// stop a while for changing paper lololol
 	while (1)
 	{
@@ -256,10 +256,13 @@ int main(int argc, char *argv[])
 				}
 				if (!ardrone.onGround())
 				{
-					cout << (80.0 - tvecs[0][2]) << endl;
-					cout << tvecs[0][1] << endl;
-					vx = (80.0 - tvecs[0][2])*0.02;
-					vr = tvecs[0][1]*0.01;
+					Mat error (4, 1, CV_64F);
+					Mat output(4, 1, CV_64F);
+					error.at<float>(0,0) = tvecs[0][2] - 150.0;
+					myPID.getCommand(error, output);
+					cout << tvecs[0][0] << endl;
+					vx = output.at<float>(0, 0)*0.005;
+					//vr = -tvecs[0][0]*0.01;
 				}
 			}
 			imshow("Aruco Market Axis", image);

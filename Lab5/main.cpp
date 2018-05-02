@@ -40,7 +40,7 @@ void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs,string name_in)
         Mat image;
 
 
-        string filename(name_in );
+        string filename(name_in);
         FileStorage fs(filename, FileStorage::READ);
         //-------------------------------Data structure init end here---------------------//
 
@@ -188,7 +188,9 @@ int main(int argc, char *argv[])
     Mat image;
     //-----------------------camera calibration for ardrone----------------------------------//
     Mat cameraMatrix, distCoeffs;
-    my_camera_calibration(cameraMatrix, distCoeffs, "config.xml");
+    my_camera_calibration(cameraMatrix, distCoeffs, "ardrone_config.xml");
+    cout << "cameraMatrix is "<<cameraMatrix<<endl;
+    cout << "distCoeffs is "<<distCoeffs<<endl;
     //-----------------------drone aruco checking and detection data structure init------------------------------//
     Ptr<aruco::Dictionary> dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250); //just this
     vector<int> ids; //aruco markers
@@ -206,11 +208,11 @@ int main(int argc, char *argv[])
         image = ardrone.getImage();
 
         // Take off / Landing
-        if (key == ' ')
+        /*if (key == ' ')
         {
             if (ardrone.onGround()) ardrone.takeoff();
             else                    ardrone.landing();
-        }
+        }*/
 
         // Move
         double vx = 0.0, vy = 0.0, vz = 0.0, vr = 0.0;
@@ -229,7 +231,7 @@ int main(int argc, char *argv[])
         if (key == 'c') ardrone.setCamera(++mode % 4);
 
         // Display the image
-        imshow("camera", image);
+        //imshow("camera", image);
 
         //---------------------------------Main part of market detection----------------------------------------------//
         aruco::detectMarkers(image, dictionary, aruco_corners, ids);
@@ -248,91 +250,7 @@ int main(int argc, char *argv[])
             }
         }
         imshow("Aruco Market Axis", image);
-        if (key == -1 && tvecs.size())
-        {
-    		//---------------------------------Main part of market detection----------------------------------------------//
-            // aruco::detectMarkers(image, dictionary, aruco_corners, ids);
-            //    // if at least one marker detected
-            // vector<Vec3d> rvecs, tvecs;
-            // if (ids.size() > 0)
-            // {
-            //     aruco::drawDetectedMarkers(image, aruco_corners, ids);
-            //
-            //     aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
-            //     // draw axis for each marker
-            //     //the more the last coefficient , the more obviously the axis will be drawn
-            //     for(int i = 0;i < ids.size(); i++)
-            //     {
-            //         aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
-            //         cout<<"Detected ArUco markers "<<ids.size()<< "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
-            //     }
-            // }
-            // imshow("Aruco Market Axis", image);
-
-            PIDManager myPID("pid.yaml");
-            //myPID.importCoeffsFromFile("pid.yaml");
-            // implement your autopilot algorithm here
-    		// only need to modify vx, vy, vz, vr
-
-            double previous_error_x = 0;
-            double integral_x = 0;
-            double previous_error_y = 0;
-            double integral_y = 0;
-            double previous_error_z = 0;
-            double integral_z = 0;
-            double previous_error_r = 0;
-            double integral_r = 0;
-
-            double dt_x = 0.1;
-            double dt_r = 0.1;
-
-
-
-            double actual_x = tvecs[0][2];
-            double error_x = 80 - actual_x;
-            integral_x = integral_x + error_x*dt_x;
-            double derivative_x = (error_x - previous_error_x)/dt_x;
-            double output_x = myPID.mX.at<double>(0, 0)*error_x + myPID.mX.at<double>(1, 0)*integral_x + myPID.mX.at<double>(2, 0)*derivative_x;
-            previous_error_x = error_x;
-
-            //myPID.setThrottleLevel(output_x);
-            // wait((int)dt_x);
-            double actual_r = tvecs[0][2];
-            double error_r = 80 - actual_r;
-            integral_r = integral_r + error_r*dt_r;
-            double derivative_r = (error_r - previous_error_r)/dt_r;
-            double output_r = myPID.mR.at<double>(0, 0)*error_r + myPID.mR.at<double>(1, 0)*integral_r + myPID.mR.at<double>(2, 0)*derivative_r;
-            previous_error_r = error_r;
-
-            //myPID.setThrottleLevel(output_r);
-            // wait((int)dt_r);
-            double error_y = 0;
-            double error_z = 0;
-            Mat input = Mat::zeros(4, 1, CV_64F);
-            Mat out = Mat::zeros(4, 1, CV_64F);
-            out.at<double>(0, 0) = error_x;
-            out.at<double>(1, 0) = error_y;
-            out.at<double>(2, 0) = error_z;
-            out.at<double>(3, 0) = error_r;
-            myPID.getCommand(input, out);
-            cout << out.at<double>(0, 0) << ", " << out.at<double>(3, 0);
-
-
-            if(out.at<double>(0, 0) <= 0.5 && out.at<double>(0, 0) >= -0.5)
-                vx = 0;
-            else if(out.at<double>(0, 0) < -0.5){
-                vx = 1;
-            }
-            else{
-                vx = -1;
-            }
-
-	   }
-
-	   ardrone.move3D(vx, vy, vz, vr);
-       waitKey(100);
     }
-    // See you
     ardrone.close();
 
     return 0;
