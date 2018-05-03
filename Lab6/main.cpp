@@ -1,19 +1,11 @@
 #include "ardrone/ardrone.h"
 #include "pid.hpp"
-// #include "calibration.h" I dorectly write in this file
-#include "opencv2/opencv.hpp"
+#include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/aruco.hpp>
 #include <bits/stdc++.h>
-#include <iostream>
-#include <fstream>
-#include "opencv2/opencv.hpp"
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #define PAT_ROWS   (6)                  // Rows of pattern
 #define PAT_COLS   (9)                 // Columns of pattern
@@ -27,145 +19,49 @@ using namespace cv;
 // Return value : SUCCESS:0  ERROR:-1
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
-const float markerLength = 12.03f;
+const float markerLength = 12.3f;
+const float required_distance = 80.0f;
 //------------------Marker dection board constants end here-----------------//
-
+//------------------velocity amplification and disamplification-------------//
+const int vx_amp = 1000;
+const int vy_amp = 1000;
+const int vz_amp = 1000;
+const int vr_amp = 1000;
+//------------------velocity amplification and disamplification ends here---------//
 // AR.Drone class
 ARDrone ardrone;
-
-void my_camera_calibration(Mat& cameraMatrix, Mat& distCoeffs, string name_in)
+int load_camera_param(string filename_in, Mat& cameraMatrix, Mat& distCoeffs)
 {
-	// image_buffer_vector 0 for built-in camera and 1 for the external camera
-	// VideoCapture cap(0);
-	//Mat image = cap.read();
-	// cap >> image;
-	// Open XML file
-	// cout << image.size() << endl;
-	//-------------------------------Data structure init-------------------------//
-	Mat image;
-
-
-	string filename(name_in);
-	FileStorage fs(filename, FileStorage::READ);
-	//-------------------------------Data structure init end here---------------------//
-	// Not found config file
-	if (fs.isOpened())
+	FileStorage fs(filename_in, FileStorage::READ);
+	if(!fs.isOpened())
 	{
-		// Image buffer
-		cout << "No configuration file is found, do calibration " << endl;
-		vector<Mat> image_buffer_vector;
-		cout << "Press Space key to capture an image" << endl;
-		cout << "Press Esc to exit" << endl;
+		return 0;
+	}
+	fs["intrinsic"] >> cameraMatrix;
+	fs["distortion"] >> distCoeffs;
+	if((int)(cameraMatrix.at<double>(0 ,0)) == 0) //fake read file
+	{
+		return 0;
+	}
+	fs.release();
+	return 1;
+}
 
-		// Calibration loop
-		while (1)
-		{
-			// Key iput
-			int key = waitKey(1) & 0xFF;
-			if (key == 27) break;
-
-			// Get an image
-			image = ardrone.getImage();
-
-			// Convert to grayscale
-			Mat gray;
-			cvtColor(image, gray, COLOR_BGR2GRAY);
-
-			// Detect a chessboard
-			Size size(PAT_COLS, PAT_ROWS);
-			vector<Point2f> corners;
-			bool found = findChessboardCorners(gray, size, corners, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_FAST_CHECK);
-
-			// Chessboard detected
-			if (found)
-			{
-				// Draw it
-				drawChessboardCorners(image, size, corners, found);
-
-				// Space key was pressed
-				if (key == ' ')
-				{
-					// Add to buffer
-					image_buffer_vector.push_back(gray);
-					// imshow("Haha this image", image_buffer_vector[image_buffer_vector.size() - 1]);
-				}
-			}
-
-			// Show the image
-			ostringstream stream;
-			stream << "Captured " << image_buffer_vector.size() << " image(s).";
-			putText(image, stream.str(), Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 1, 1);
-			imshow("Camera Calibration", image);
-		}
-
-		// We have enough samples
-		if (image_buffer_vector.size() > 4)
-		{
-			Size size(PAT_COLS, PAT_ROWS);
-			vector< vector<Point2f> > corners2D;
-			vector< vector<Point3f> > corners3D;
-
-			for (size_t i = 0; i < image_buffer_vector.size(); i++)
-			{
-				// Detect a chessboard
-				vector<Point2f> tmp_corners2D;
-				// imshow("Haha", image_buffer_vector[i]);
-				// getchar();
-				bool found = findChessboardCorners(image_buffer_vector[i], size, tmp_corners2D, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_FAST_CHECK);
-
-				// Chessboard detected
-				if (found)
-				{
-					// Convert the corners to sub-pixel
-					cornerSubPix(image_buffer_vector[i], tmp_corners2D, cvSize(11, 11), cvSize(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::COUNT, 30, 0.1));
-					corners2D.push_back(tmp_corners2D);
-
-					// Set the 3D position of patterns
-					const float squareSize = CHESS_SIZE;
-					vector<Point3f> tmp_corners3D;
-					for (int j = 0; j < size.height; j++)
-					{
-						for (int k = 0; k < size.width; k++)
-						{
-							tmp_corners3D.push_back(Point3f((float)(k*squareSize), (float)(j*squareSize), 0.0));
-						}
-					}
-					corners3D.push_back(tmp_corners3D);
-				}
-			}
-
-			// Estimate camera parameters
-			//Mat cameraMatrix, distCoeffs;
-			vector<Mat> rvec, tvec;
-			calibrateCamera(corners3D, corners2D, image_buffer_vector[0].size(), cameraMatrix, distCoeffs, rvec, tvec);
-			cout << cameraMatrix << endl;
-			cout << distCoeffs << endl;
-
-			// Save them
-			FileStorage tmp(filename, FileStorage::WRITE);
-			tmp << "intrinsic" << cameraMatrix;
-			tmp << "distortion" << distCoeffs;
-			tmp.release();
-
-			// Reload
-			fs.open(filename, FileStorage::READ);
-		}
-		// Destroy windows
-		destroyAllWindows();
+int main(int argc, char *argv[])
+{
+	// Initialize
+	//-----------------------camera parameter loading for ardrone----------------------------------//
+	Mat image;
+	Mat cameraMatrix, distCoeffs;
+	if(load_camera_param(argv[1], cameraMatrix, distCoeffs))
+	{
+		//nop;
 	}
 	else
 	{
-		cout << "Already have configuration file, just read the configuration file " << endl;
-		fs["intrinsic"] >> cameraMatrix;
-		fs["distortion"] >> distCoeffs;
-	}
-}
-int main(int argc, char *argv[])
-{
-	// AR.Drone class
-	//ARDrone ardrone;
+		cout << "Loading param failed now manaully loading the parameters"<<endl;
 
-	// Initialize
+	}
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
@@ -195,17 +91,9 @@ int main(int argc, char *argv[])
 	cout << "*    'Esc'   -- Exit                  *" << endl;
 	cout << "*                                     *" << endl;
 	cout << "***************************************" << endl;
-	Mat image;
-	//-----------------------camera calibration for ardrone----------------------------------//
-	Mat cameraMatrix, distCoeffs;
-	//my_camera_calibration(cameraMatrix, distCoeffs, "config.xml");
 	//rvec 02 對應vr
-	FileStorage fs("config.xml", FileStorage::READ);
-	fs["intrinsic"] >> cameraMatrix;
-	fs["distortion"] >> distCoeffs;
-	fs.release();
+
 	//-----------------------drone aruco checking and detection data structure init------------------------------//
-	//aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250); //just this
 	cv::Ptr<aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     vector<int> ids; //aruco markers
 	vector<vector<Point2f> > aruco_corners; //aruco corners
@@ -245,10 +133,8 @@ int main(int argc, char *argv[])
 		static int mode = 0;
 		if (key == 'c') ardrone.setCamera(++mode % 4);
 
-		if (key == 255) {
-            cout << "In....\n";
-			// implement your autopilot algorithm here
-			// only need to modify vx, vy, vz, vr
+		if (key == 255)
+		{
 			//---------------------------------Main part of market detection----------------------------------------------//
 
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
@@ -258,22 +144,46 @@ int main(int argc, char *argv[])
 				aruco::drawDetectedMarkers(image, aruco_corners, ids);
 				vector<Vec3d> rvecs, tvecs;
 				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
-				// draw axis for each marker
+				//draw axis for each marker
 				//the more the last coefficient , the more obviously the axis will be drawn
 				for (int i = 0; i < ids.size(); i++)
 				{
 					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
 					cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
 				}
-				if (!ardrone.onGround())
+				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
 				{
+					// implement your autopilot algorithm here
+					// only need to modify vx, vy, vz, vr
+					//error is {tvec[0][2] - 80.0f (required_distance), tvec[0][0], tvec[0][1], rvec[0][2]}
+					//drone x(forward and back) is corresponding to tvec[0][2]
+					//drone y(left and right) is corresponding to tvec[0][0]
+					//drone z(up and down) is corresponding to tvec[0][1]
+					/*
+					流程如下：
+					
+					*/
 					Mat error (4, 1, CV_64F);
 					Mat output(4, 1, CV_64F);
-					error.at<float>(0,0) = tvecs[0][2] - 150.0;
+					//setting distance delta
+					error.at<double>(0, 0)=tvecs[0][2] - required_distance;
+					error.at<double>(1, 0)=tvecs[0][0] - 0;
+					error.at<double>(2, 0)=tvecs[0][1] - 0;
+					if(rvecs[0][0]<0)
+					{
+						error.at<double>(3, 0) = - ( rvecs[0][2] - 0 );
+					}
+                	else
+					{
+						error.at<double>(3, 0) = ( rvecs[0][2] - 0 );
+					}
+					//setting distance delta done
+					//now doing pid
 					myPID.getCommand(error, output);
-					cout << tvecs[0][0] << endl;
-					vx = output.at<float>(0, 0)*0.005;
-					//vr = -tvecs[0][0]*0.01;
+					//doing the [P, I , D] by ourselves to implement the smoothing, how to check if it is smoothed?
+					//by printing out the v_something to see if it is stable or not
+					//pid done
+					cout << " Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.ar<double>(3, 0) <<endl;
 				}
 			}
 			imshow("Aruco Market Axis", image);
