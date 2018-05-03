@@ -28,6 +28,14 @@ const int vy_amp = 1000;
 const int vz_amp = 1000;
 const int vr_amp = 1000;
 //------------------velocity amplification and disamplification ends here---------//
+//------------------error bounds--------------------------------------------------//
+const float vx_error_bound = 1.0f;
+const float vr_error_bound = 0.23f;
+//------------------error bounds end here----------------------------------------//
+//------------------least required speed-----------------------------------------//
+const float vx_lower_bound = 0.0f;
+const float vr_lower_bound = 0.05f;
+//------------------least required speed-end here----------------------------------//
 // AR.Drone class
 ARDrone ardrone;
 int load_camera_param(string filename_in, Mat& cameraMatrix, Mat& distCoeffs)
@@ -56,11 +64,13 @@ int main(int argc, char *argv[])
 	if(load_camera_param(argv[1], cameraMatrix, distCoeffs))
 	{
 		//nop;
+		cout << "Loading param SUCCESSFULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+		cout << "cameraMatrix " << cameraMatrix <<endl;
+		cout << "distCoeffs " << distCoeffs <<endl;
 	}
 	else
 	{
 		cout << "Loading param failed now manaully loading the parameters"<<endl;
-
 	}
 	if (!ardrone.open())
 	{
@@ -161,38 +171,78 @@ int main(int argc, char *argv[])
 					//drone z(up and down) is corresponding to tvec[0][1]
 					/*
 					流程如下：
-					
+					vx:
+					測一下實際的飛行，然後看看是否有需要調整（放在上面的const 把vx印出來，超過80cm(required_distance)就要加速反之亦然，調整一下放大or縮小係數，）
+					vr:
+					測一下實際的飛行，于哲說會發現rvec其實很小（轉向的時候） 基本上誤差就可以那樣忽略掉，然後因為它都是1e-3左右，因此放大一千倍較為合適
+					test rvecs[0][2] is the r (放在上面的const 調整一下放大or縮小係數，）
 					*/
 					Mat error (4, 1, CV_64F);
 					Mat output(4, 1, CV_64F);
 					//setting distance delta
+					//---------------------------------setting tvec00 starts here--------------------------------------//
 					error.at<double>(0, 0)=tvecs[0][2] - required_distance;
+					//---------------------------------setting tvec00 ends here--------------------------------------//
 					error.at<double>(1, 0)=tvecs[0][0] - 0;
 					error.at<double>(2, 0)=tvecs[0][1] - 0;
-					if(rvecs[0][0]<0)
-					{
-						error.at<double>(3, 0) = - ( rvecs[0][2] - 0 );
-					}
-                	else
-					{
-						error.at<double>(3, 0) = ( rvecs[0][2] - 0 );
-					}
-					//setting distance delta done
+					/*朱蝶的code 基本上就是看pid的輸出值在進行倍率調整，太大就除太小就乘，但因為可能他們的跟我們的不一樣 所以就當參考，我直接用係數去改試試看
+					time的話我再問問她是幹麻
+					if(time>0){
+                    time--;
+                    vx=tmp;
+                	}else{
+                	if(_output.at<double>(0, 0)<=5 && _output.at<double>(0,0)>(-5)){
+                    	vx=0;
+                	}else if(_output.at<double>(0, 0)<=20 && _output.at<double>(0,0)>(-20)){
+                    	vx=_output.at<double>(0, 0)/170;
+                	}else if(_output.at<double>(0, 0)<=70 && _output.at<double>(0,0)>(-70)){
+                    	vx=_output.at<double>(0, 0)/200;
+                	}else if(_output.at<double>(0, 0)<=200 && _output.at<double>(0,0)>(-200)){
+                    	vx=_output.at<double>(0, 0)/200;
+                	}else{
+                    	time=1000;
+                    	tmp=_output.at<double>(0, 0)/200;
+                	}
+					*/
+					//---------------------------------setting rvec02 starts here--------------------------------------//
+					if(rvecs[0][2] < vr_error_bound || rvecs[0][2]> -vr_error_bound) //誤差很小 就忽略誤差
+        			{
+            			if((rvecs[0][0]>= 0 && rvecs[0][2] >= 0 )|| (rvecs[0][0]<= 0 && rvecs[0][2] <= 0))//markerzai右邊同號
+						{
+							error.at<double>(3,0) = abs(rvecs[0][2]);
+						}
+            			else if ((rvecs[0][0] < 0 && rvecs[0][2] > 0) || (rvecs[0][0] > 0 && rvecs[0][2] < 0))//marker zai左邊異號
+						{
+							error.at<double>(3,0) = - abs(rvecs[0][2]);
+						}
+        			}
+					//---------------------------------setting rvec02 ends here--------------------------------------//
 					//now doing pid
-					myPID.getCommand(error, output);
 					//doing the [P, I , D] by ourselves to implement the smoothing, how to check if it is smoothed?
-					//by printing out the v_something to see if it is stable or not
+					myPID.getCommand(error, output);
 					//pid done
-					cout << " Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.ar<double>(3, 0) <<endl;
+
+        			//---------------------------------assign the vx and vr-------------------------------------------//
+					//amp代表放大係數
+        			if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
+					{
+						vr = 0;
+					}
+        			else
+					{
+						vr = output.at<double>(3, 0) * vr_amp;
+					}
+					vx = output.at<double>(0, 0) * vx_amp;
+					//---------------------------------assign the vx and vr-------------------------------------------//
+					//by printing out the v_something to see if it is stable or not
+					cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.at<double>(3, 0) <<endl;
 				}
 			}
-			imshow("Aruco Market Axis", image);
+			imshow("Aruco Marker Axis", image);
 		}
 		ardrone.move3D(vx, vy, vz, vr);
 		// Display the image
 		imshow("camera", image);
-
-
 	}
 	// See you
 	ardrone.close();
