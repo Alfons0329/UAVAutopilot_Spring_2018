@@ -68,20 +68,42 @@ void PIDManager::getCommand(Mat& _error, Mat& _output) {
 	if(mInit) {
 		for(int i = 0; i < 4; i++) {
 			// de
+			//cout << "A...\n";
 			de.at<double>(i, 0) = (_error.at<double>(i, 0) - previous_error.at<double>(i, 0)) / dt;
+			//cout << "B...\n";
 			error_integral.at<double>(i, 0) += de.at<double>(i, 0) * dt;
-		
+			//cout << "C...\n";
 			// output
-			Mat coeffs;
-			if(i == 0) 	coeffs = mX;
-			else if(i == 1)	coeffs = mY;
-			else if(i == 2) coeffs = mZ;
-			else 		coeffs = mR;
-			cout << endl << i << endl;
-			cout << coeffs << endl;
+			Mat coeffs(3,1,CV_64F);
+			//if(i == 0) 	coeffs = mX;
+			//else if(i == 1)	coeffs = mY;
+			//else if(i == 2) coeffs = mZ;
+			//else 		coeffs = mR;
+			if(i == 0){
+				coeffs.at<double>(0,0) = 0.0006;
+				coeffs.at<double>(1,0) = 0.000001;
+				coeffs.at<double>(2,0) = 0.000001;
+			}
+			else if(i == 1){
+				coeffs.at<double>(0,0) = 0;
+				coeffs.at<double>(1,0) = 0;
+				coeffs.at<double>(2,0) = 0;
+			}
+			else if(i == 2){
+				coeffs.at<double>(0,0) = 0;
+				coeffs.at<double>(1,0) = 0;
+				coeffs.at<double>(2,0) = 0;
+			}
+			else{
+				coeffs.at<double>(0,0) = 0.125;
+				coeffs.at<double>(1,0) = 0.0001;
+				coeffs.at<double>(2,0) = 0.0001;
+			}
+			//cout << endl << i << endl;
+			//cout << coeffs << endl;
 			output.at<double>(i, 0) = _error.at<double>(i, 0) * coeffs.at<double>(0, 0)		// error * kp
 						+ error_integral.at<double>(i, 0) * coeffs.at<double>(1, 0) 	// Sum(errors) * ki
-						+ de.at<double>(i, 0) * coeffs.at<double>(2, 0);		// de * kd	
+						+ de.at<double>(i, 0) * coeffs.at<double>(2, 0);		// de * kd
 		}
 	} else {
 		mInit = true;
