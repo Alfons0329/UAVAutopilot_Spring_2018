@@ -227,15 +227,17 @@ int main(int argc, char *argv[])
         			if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
 					{
 						vr = 0;
+						cout<< "Unamplified Calibrated vr "<< output.at<double>(3, 0) <<endl;
 					}
         			else
 					{
 						vr = output.at<double>(3, 0) * vr_amp;
+						cout<< "Unamplified Calibrated vr "<< output.at<double>(3, 0) <<endl;
 					}
 					vx = output.at<double>(0, 0) * vx_amp;
+					cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) <<endl; 
 					//---------------------------------assign the vx and vr-------------------------------------------//
 					//by printing out the v_something to see if it is stable or not
-					cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.at<double>(3, 0) <<endl;
 				}
 			}
 			imshow("Aruco Marker Axis", image);

@@ -6,5 +6,5 @@ cp PID/build/makefile ~/cvdrone/build/unix/makefile
 cp main.cpp ~/cvdrone/src
 cd ~
 cd cvdrone/build/unix
-make
+make -j8
 ./test.a config.xml
