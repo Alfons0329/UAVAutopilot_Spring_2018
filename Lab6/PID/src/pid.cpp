@@ -80,9 +80,9 @@ void PIDManager::getCommand(Mat& _error, Mat& _output) {
 			//else if(i == 2) coeffs = mZ;
 			//else 		coeffs = mR;
 			if(i == 0){
-				coeffs.at<double>(0,0) = 0.0006;
-				coeffs.at<double>(1,0) = 0.000001;
-				coeffs.at<double>(2,0) = 0.000001;
+				coeffs.at<double>(0,0) = 0.00125;
+				coeffs.at<double>(1,0) = 0.0001;
+				coeffs.at<double>(2,0) = 0.0001;
 			}
 			else if(i == 1){
 				coeffs.at<double>(0,0) = 0;

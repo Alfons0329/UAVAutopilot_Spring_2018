@@ -19,22 +19,22 @@ using namespace cv;
 // Return value : SUCCESS:0  ERROR:-1
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
-const float markerLength = 12.3f;
+const float markerLength = 9.4f;
 const float required_distance = 80.0f;
 //------------------Marker dection board constants end here-----------------//
 //------------------velocity amplification and disamplification-------------//
-const int vx_amp = 1000;
+const int vx_amp = 10;
 const int vy_amp = 1000;
 const int vz_amp = 1000;
-const int vr_amp = 1000;
+const int vr_amp = 20;
 //------------------velocity amplification and disamplification ends here---------//
 //------------------error bounds--------------------------------------------------//
 const float vx_error_bound = 1.0f;
-const float vr_error_bound = 0.23f;
+const float vr_error_bound = 0.5f;
 //------------------error bounds end here----------------------------------------//
 //------------------least required speed-----------------------------------------//
-const float vx_lower_bound = 0.0f;
-const float vr_lower_bound = 0.05f;
+const float vx_lower_bound = 0.01f;
+const float vr_lower_bound = 0.3f;
 //------------------least required speed-end here----------------------------------//
 // AR.Drone class
 ARDrone ardrone;
@@ -60,18 +60,21 @@ int main(int argc, char *argv[])
 	// Initialize
 	//-----------------------camera parameter loading for ardrone----------------------------------//
 	Mat image;
-	Mat cameraMatrix, distCoeffs;
-	if(load_camera_param(argv[1], cameraMatrix, distCoeffs))
-	{
-		//nop;
-		cout << "Loading param SUCCESSFULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
-		cout << "cameraMatrix " << cameraMatrix <<endl;
-		cout << "distCoeffs " << distCoeffs <<endl;
-	}
-	else
-	{
-		cout << "Loading param failed now manaully loading the parameters"<<endl;
-	}
+	Mat cameraMatrix(3,3,CV_64F), distCoeffs(1,5,CV_64F);
+	cameraMatrix.at<double>(0,0) = 5.11897658982521e+02;
+	cameraMatrix.at<double>(0,1) = 0.;
+	cameraMatrix.at<double>(0,2) = 3.165825647196696e+02;
+	cameraMatrix.at<double>(1,0) = 0.;
+	cameraMatrix.at<double>(1,1) = 5.081336169143607e+02;
+	cameraMatrix.at<double>(1,2) = 1.903117849450484e+02;
+	cameraMatrix.at<double>(2,0) = 0.;
+	cameraMatrix.at<double>(2,1) = 0.;
+	cameraMatrix.at<double>(2,2) = 1.;
+	distCoeffs.at<double>(0,0) = 8.7295277725232e-01;
+	distCoeffs.at<double>(1,0) = -3.915795335526079e+01;
+	distCoeffs.at<double>(2,0) = -1.872194795688528e-02;
+	distCoeffs.at<double>(3,0) = 1.353528461095838e-03;
+	distCoeffs.at<double>(4,0) = 3.000881704739565e+02;
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
@@ -146,11 +149,17 @@ int main(int argc, char *argv[])
 		if (key == 255)
 		{
 			//---------------------------------Main part of market detection----------------------------------------------//
-
+			bool flags[5] = {0};
+			int index[5] = {0};
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
 			// if at least one marker detected
 			if (ids.size() > 0)
 			{
+				for (int j = 0; j < ids.size(); j++)
+			    {
+			        flags[ids[j]] = true;
+			        index[ids[j]] = j;
+			    }
 				aruco::drawDetectedMarkers(image, aruco_corners, ids);
 				vector<Vec3d> rvecs, tvecs;
 				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
@@ -159,7 +168,7 @@ int main(int argc, char *argv[])
 				for (int i = 0; i < ids.size(); i++)
 				{
 					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
-					cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+					//cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
 				}
 				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
 				{
@@ -179,31 +188,79 @@ int main(int argc, char *argv[])
 					*/
 					Mat error (4, 1, CV_64F);
 					Mat output(4, 1, CV_64F);
+					if (flags[4] == true) //final marker for landing
+					{
+						error.at<float>(0,0) = tvecs[index[4]][1] - 10;
+						error.at<float>(1,0) = tvecs[index[4]][0];
+						error.at<float>(2,0) = 0;
+						if (error.at<float>(0, 0) <5 && error.at<float>(1, 0) < 5)
+						{
+							ardrone.landing();
+						}
+					}
+					else if (flags[3] == true) //forth stop
+					{
+						error.at<float>(0,0) = tvecs[index[0]][2] - 80;
+						error.at<float>(1,0) = tvecs[index[0]][0];
+						error.at<float>(2,0) = tvecs[index[0]][1];
+						error.at<float>(3,0) = tvecs[index[0]][2];
+						if (fabs(error.at<float>(0, 0)) <= 10)
+						{
+							ardrone.setCamera(++mode % 4);
+						}
+
+					}
+					else if (turn == 2)
+					{
+						vr = 0.3;
+					}
+					else if (flags[2] == true)
+					{
+						error.at<float>(0,0) = tvecs[index[0]][2] - 100;
+						error.at<float>(1,0) = tvecs[index[0]][0];
+						error.at<float>(2,0) = tvecs[index[0]][1];
+						error.at<float>(3,0) = tvecs[index[0]][2];
+						if (fabs(error.at<float>(0, 0)) <= 10)
+						{
+							turn = 2;
+						}
+					}
+					else if (turn == 1)
+					{
+						vr = 0.3;
+					}
+					else if (flags[1] == true)
+					{
+						error.at<float>(0,0) = tvecs[index[0]][2] - 100;
+						error.at<float>(1,0) = tvecs[index[0]][0];
+						error.at<float>(2,0) = tvecs[index[0]][1];
+						error.at<float>(3,0) = tvecs[index[0]][2];
+						if (fabs(error.at<float>(0, 0)) <= 10)
+						{
+							turn = 1;
+						}
+					}
+					else if (flags[0] == true)
+					{
+						//go foward
+						error.at<float>(0,0) = tvecs[index[0]][2];
+						error.at<float>(1,0) = tvecs[index[0]][0] - 80;
+						error.at<float>(2,0) = tvecs[index[0]][1];
+						error.at<float>(3,0) = tvecs[index[0]][2];
+
+						vx = 0.15f;
+					}
+					else
+					{
+						vr = 0.3;
+					}
 					//setting distance delta
 					//---------------------------------setting tvec00 starts here--------------------------------------//
 					error.at<double>(0, 0)=tvecs[0][2] - required_distance;
 					//---------------------------------setting tvec00 ends here--------------------------------------//
 					error.at<double>(1, 0)=tvecs[0][0] - 0;
 					error.at<double>(2, 0)=tvecs[0][1] - 0;
-					/*朱蝶的code 基本上就是看pid的輸出值在進行倍率調整，太大就除太小就乘，但因為可能他們的跟我們的不一樣 所以就當參考，我直接用係數去改試試看
-					time的話我再問問她是幹麻
-					if(time>0){
-                    time--;
-                    vx=tmp;
-                	}else{
-                	if(_output.at<double>(0, 0)<=5 && _output.at<double>(0,0)>(-5)){
-                    	vx=0;
-                	}else if(_output.at<double>(0, 0)<=20 && _output.at<double>(0,0)>(-20)){
-                    	vx=_output.at<double>(0, 0)/170;
-                	}else if(_output.at<double>(0, 0)<=70 && _output.at<double>(0,0)>(-70)){
-                    	vx=_output.at<double>(0, 0)/200;
-                	}else if(_output.at<double>(0, 0)<=200 && _output.at<double>(0,0)>(-200)){
-                    	vx=_output.at<double>(0, 0)/200;
-                	}else{
-                    	time=1000;
-                    	tmp=_output.at<double>(0, 0)/200;
-                	}
-					*/
+
 					//---------------------------------setting rvec02 starts here--------------------------------------//
 					if(rvecs[0][2] < vr_error_bound || rvecs[0][2]> -vr_error_bound) //誤差很小 就忽略誤差
         			{
@@ -227,17 +284,39 @@ int main(int argc, char *argv[])
         			if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
 					{
 						vr = 0;
-						cout<< "Unamplified Calibrated vr "<< output.at<double>(3, 0) <<endl;
 					}
         			else
 					{
-						vr = output.at<double>(3, 0) * vr_amp;
-						cout<< "Unamplified Calibrated vr "<< output.at<double>(3, 0) <<endl;
+						vr = -output.at<double>(3, 0) * vr_amp;
+						//vr = 0;
 					}
-					vx = output.at<double>(0, 0) * vx_amp;
-					cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) <<endl; 
+					if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
+					{
+						vx = 0;
+					}
+        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
+					{
+						vx = output.at<double>(0, 0) * vx_amp;
+						//vx = 0;
+					}
+					else
+					{
+						if(tvecs[0][2] - required_distance > 0)
+						{
+							vx = 0.4;
+						}
+						else
+						{
+							vx = -0.15;
+						}
+					}
+
+					//vx = output.at<double>(0, 0) * 0;
 					//---------------------------------assign the vx and vr-------------------------------------------//
 					//by printing out the v_something to see if it is stable or not
+					//cout << "Error at vx: " << error.at<double>(0,0) << ", error at vr: " << error.at<double>(3,0) << endl;
+					cout << "******************************\nvx: " << vx << ", vr: " << vr << ", dis: " << tvecs[0][2] << endl;
+					//cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.at<double>(3, 0) <<endl;
 				}
 			}
 			imshow("Aruco Marker Axis", image);
@@ -251,3 +330,22 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+/*朱蝶的code 基本上就是看pid的輸出值在進行倍率調整，太大就除太小就乘，但因為可能他們的跟我們的不一樣 所以就當參考，我直接用係數去改試試看
+time的話我再問問她是幹麻
+if(time>0){
+time--;
+vx=tmp;
+}else{
+if(_output.at<double>(0, 0)<=5 && _output.at<double>(0,0)>(-5)){
+	vx=0;
+}else if(_output.at<double>(0, 0)<=20 && _output.at<double>(0,0)>(-20)){
+	vx=_output.at<double>(0, 0)/170;
+}else if(_output.at<double>(0, 0)<=70 && _output.at<double>(0,0)>(-70)){
+	vx=_output.at<double>(0, 0)/200;
+}else if(_output.at<double>(0, 0)<=200 && _output.at<double>(0,0)>(-200)){
+	vx=_output.at<double>(0, 0)/200;
+}else{
+	time=1000;
+	tmp=_output.at<double>(0, 0)/200;
+}
+*/

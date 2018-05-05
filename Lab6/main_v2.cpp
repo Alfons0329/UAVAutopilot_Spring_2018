@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
 					{
 						vx = output.at<double>(0, 0) * vx_amp;
 					}
-					
+
 					//vx = output.at<double>(0, 0) * 0;
 					//---------------------------------assign the vx and vr-------------------------------------------//
 					//by printing out the v_something to see if it is stable or not
