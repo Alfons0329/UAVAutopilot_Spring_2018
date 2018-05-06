@@ -75,6 +75,19 @@ int main(int argc, char *argv[])
 	distCoeffs.at<double>(2,0) = -1.872194795688528e-02;
 	distCoeffs.at<double>(3,0) = 1.353528461095838e-03;
 	distCoeffs.at<double>(4,0) = 3.000881704739565e+02;
+	/*
+	if(load_camera_param(argv[1], cameraMatrix, distCoeffs))
+	{
+		//nop;
+		cout << "Loading param SUCCESSFULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+		cout << "cameraMatrix " << cameraMatrix <<endl;
+		cout << "distCoeffs " << distCoeffs <<endl;
+	}
+	else
+	{
+		cout << "Loading param failed now manaully loading the parameters"<<endl;
+	}
+	*/
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
@@ -114,6 +127,13 @@ int main(int argc, char *argv[])
 	//
 	PIDManager myPID("pid.yaml");
 	getchar();// stop a while for changing paper lololol
+	bool flags[5];
+	int index[5];
+	int turn = 0;
+	for (int j = 0; j < 5; j++)
+	{
+		flags[j] = false;
+	}
 	while (1)
 	{
 		// Key input
@@ -149,17 +169,19 @@ int main(int argc, char *argv[])
 		if (key == 255)
 		{
 			//---------------------------------Main part of market detection----------------------------------------------//
-			bool flags[5] = {0};
-			int index[5] = {0};
+
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
 			// if at least one marker detected
+
 			if (ids.size() > 0)
 			{
 				for (int j = 0; j < ids.size(); j++)
-			    {
-			        flags[ids[j]] = true;
-			        index[ids[j]] = j;
-			    }
+				{
+					flags[ids[j]-1] = true;
+					cout << "ids: " << ids[j] << endl;
+					index[ids[j]-1] = j;
+				}
+
 				aruco::drawDetectedMarkers(image, aruco_corners, ids);
 				vector<Vec3d> rvecs, tvecs;
 				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
@@ -170,6 +192,263 @@ int main(int argc, char *argv[])
 					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
 					//cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
 				}
+				//---------------------------------------missions-----------------------------------------
+				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
+				{
+
+						Mat error (4, 1, CV_64F);
+						Mat output(4, 1, CV_64F);
+
+						cout << turn << endl;
+						if (flags[4] == true)
+						{
+							//error.at<float>(0,0) = tvecs[index[0]][1] - 10;
+							//error.at<float>(1,0) = tvecs[index[0]][0];
+							//error.at<float>(2,0) = 0;
+							ardrone.landing();
+							/*if (error.at<float>(0, 0) <5 && error.at<float>(1, 0) < 5)
+							{
+								ardrone.landing();
+							}*/
+						}
+						else if (flags[3] == true)
+						{
+							//error.at<float>(0,0) = tvecs[index[0]][2] - 80;
+							//error.at<float>(1,0) = tvecs[index[0]][0];
+							//error.at<float>(2,0) = tvecs[index[0]][1];
+							//error.at<float>(3,0) = tvecs[index[0]][2];
+							int INDEX = index[3];
+							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
+							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
+							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
+							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
+		        			{
+		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
+								{
+									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
+								}
+		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
+								{
+									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
+								}
+		        			}
+							myPID.getCommand(error, output);
+							
+							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
+							{
+								vr = 0;
+							}
+		        			else
+							{
+								vr = -output.at<double>(3, 0) * vr_amp;
+								//vr = 0;
+							}
+							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
+							{
+								vx = 0;
+							}
+		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
+							{
+								vx = output.at<double>(0, 0) * vx_amp;
+								//vx = 0;
+							}
+							else{
+								if(tvecs[INDEX][2] - required_distance > 0)
+									vx = 0.4;
+								else
+									vx = -0.15;
+							}
+							cout << "************************* SEE ARUCO 4 *****************************\n";
+							if (abs(output.at<double>(0, 0)) <= vx_lower_bound)
+							{
+								cout << "CHANGE CAMERA\n";
+								ardrone.setCamera(++mode % 4);
+							}
+							
+						}
+						else if (turn == 2)
+						{
+							vr = -0.3;
+						}
+						else if (flags[2] == true)
+						{
+							//error.at<float>(0,0) = tvecs[index[0]][2] - 100;
+							//error.at<float>(1,0) = tvecs[index[0]][0];
+							//error.at<float>(2,0) = tvecs[index[0]][1];
+							//error.at<float>(3,0) = tvecs[index[0]][2];
+							int INDEX = index[2];
+							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
+							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
+							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
+							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
+		        			{
+		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
+								{
+									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
+								}
+		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
+								{
+									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
+								}
+		        			}
+							myPID.getCommand(error, output);
+							
+							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
+							{
+								vr = 0;
+							}
+		        			else
+							{
+								vr = -output.at<double>(3, 0) * vr_amp;
+								//vr = 0;
+							}
+							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
+							{
+								vx = 0;
+							}
+		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
+							{
+								vx = output.at<double>(0, 0) * vx_amp;
+								//vx = 0;
+							}
+							else{
+								if(tvecs[INDEX][2] - required_distance > 0)
+									vx = 0.4;
+								else
+									vx = -0.15;
+							}
+							cout << "************************* SEE ARUCO 3 *****************************\n";
+							if (abs(output.at<double>(0, 0)) < vx_lower_bound)
+							{
+								turn = 2;
+							}
+						}
+						else if (turn == 1)
+						{
+							vr = -0.3;
+						}
+						else if (flags[1] == true)
+						{
+							//error.at<float>(0,0) = tvecs[index[0]][2] - 100;
+							//error.at<float>(1,0) = tvecs[index[0]][0];
+							//error.at<float>(2,0) = tvecs[index[0]][1];
+							//error.at<float>(3,0) = tvecs[index[0]][2];
+							int INDEX = index[1];
+							error.at<double>(0, 0)=tvecs[INDEX][2] - 50;
+							error.at<double>(1, 0)=tvecs[INDEX][1] - 0;
+							error.at<double>(2, 0)=tvecs[INDEX][0] - 0;
+							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
+		        			{
+		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
+								{
+									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
+								}
+		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
+								{
+									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
+								}
+		        			}
+							myPID.getCommand(error, output);
+							
+							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
+							{
+								vr = 0;
+							}
+		        			else
+							{
+								vr = -output.at<double>(3, 0) * vr_amp;
+								//vr = 0;
+							}
+							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
+							{
+								vx = 0;
+							}
+		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
+							{
+								vx = output.at<double>(0, 0) * vx_amp;
+								//vx = 0;
+							}
+							else{
+								if(tvecs[INDEX][2] - required_distance > 0)
+									vx = 0.4;
+								else
+									vx = -0.15;
+							}
+							cout << "************************* SEE ARUCO 2 *****************************\n";
+							if (abs(output.at<double>(0, 0)) < vx_lower_bound)
+							{
+								turn = 1;
+							}
+						}
+						else if(turn == -2){
+							vy = -0.3;
+							vx = 0;
+							vr = 0;
+							vz = 0;
+						}
+						else if (flags[0] == true)
+						{
+							//go foward
+							//error.at<float>(0,0) = tvecs[index[0]][2];
+							//error.at<float>(1,0) = tvecs[index[0]][0] - 80;
+							//error.at<float>(2,0) = tvecs[index[0]][1];
+							//error.at<float>(3,0) = tvecs[index[0]][2];
+							int INDEX = index[0];
+							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
+							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
+							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
+							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
+		        			{
+		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
+								{
+									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
+								}
+		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
+								{
+									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
+								}
+		        			}
+							myPID.getCommand(error, output);
+							
+							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
+							{
+								vr = 0;
+							}
+		        			else
+							{
+								vr = -output.at<double>(3, 0) * vr_amp;
+								//vr = 0;
+							}
+							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
+							{
+								vx = 0;
+							}
+		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
+							{
+								vx = output.at<double>(0, 0) * vx_amp;
+								//vx = 0;
+							}
+							else{
+								if(tvecs[INDEX][2] - required_distance > 0)
+									vx = 1;
+								else
+									vx = -0.15;
+							}
+							cout << "************************* SEE ARUCO 1 *****************************\n";
+							if(abs(error.at<double>(0, 0)) < vx_lower_bound){
+								turn = -2;
+							}
+						}
+
+						for (int j = 0; j < 5; j++)
+						{
+							flags[j] = false;
+						}
+					
+					
+				}
+
+				/*
 				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
 				{
 					// implement your autopilot algorithm here
@@ -178,89 +457,16 @@ int main(int argc, char *argv[])
 					//drone x(forward and back) is corresponding to tvec[0][2]
 					//drone y(left and right) is corresponding to tvec[0][0]
 					//drone z(up and down) is corresponding to tvec[0][1]
-					/*
-					流程如下：
-					vx:
-					測一下實際的飛行，然後看看是否有需要調整（放在上面的const 把vx印出來，超過80cm(required_distance)就要加速反之亦然，調整一下放大or縮小係數，）
-					vr:
-					測一下實際的飛行，于哲說會發現rvec其實很小（轉向的時候） 基本上誤差就可以那樣忽略掉，然後因為它都是1e-3左右，因此放大一千倍較為合適
-					test rvecs[0][2] is the r (放在上面的const 調整一下放大or縮小係數，）
-					*/
+					
 					Mat error (4, 1, CV_64F);
 					Mat output(4, 1, CV_64F);
-					if (flags[4] == true) //final marker for landing
-					{
-						error.at<float>(0,0) = tvecs[index[4]][1] - 10;
-						error.at<float>(1,0) = tvecs[index[4]][0];
-						error.at<float>(2,0) = 0;
-						if (error.at<float>(0, 0) <5 && error.at<float>(1, 0) < 5)
-						{
-							ardrone.landing();
-						}
-					}
-					else if (flags[3] == true) //forth stop
-					{
-						error.at<float>(0,0) = tvecs[index[0]][2] - 80;
-						error.at<float>(1,0) = tvecs[index[0]][0];
-						error.at<float>(2,0) = tvecs[index[0]][1];
-						error.at<float>(3,0) = tvecs[index[0]][2];
-						if (fabs(error.at<float>(0, 0)) <= 10)
-						{
-							ardrone.setCamera(++mode % 4);
-						}
-
-					}
-					else if (turn == 2)
-					{
-						vr = 0.3;
-					}
-					else if (flags[2] == true)
-					{
-						error.at<float>(0,0) = tvecs[index[0]][2] - 100;
-						error.at<float>(1,0) = tvecs[index[0]][0];
-						error.at<float>(2,0) = tvecs[index[0]][1];
-						error.at<float>(3,0) = tvecs[index[0]][2];
-						if (fabs(error.at<float>(0, 0)) <= 10)
-						{
-							turn = 2;
-						}
-					}
-					else if (turn == 1)
-					{
-						vr = 0.3;
-					}
-					else if (flags[1] == true)
-					{
-						error.at<float>(0,0) = tvecs[index[0]][2] - 100;
-						error.at<float>(1,0) = tvecs[index[0]][0];
-						error.at<float>(2,0) = tvecs[index[0]][1];
-						error.at<float>(3,0) = tvecs[index[0]][2];
-						if (fabs(error.at<float>(0, 0)) <= 10)
-						{
-							turn = 1;
-						}
-					}
-					else if (flags[0] == true)
-					{
-						//go foward
-						error.at<float>(0,0) = tvecs[index[0]][2];
-						error.at<float>(1,0) = tvecs[index[0]][0] - 80;
-						error.at<float>(2,0) = tvecs[index[0]][1];
-						error.at<float>(3,0) = tvecs[index[0]][2];
-
-						vx = 0.15f;
-					}
-					else
-					{
-						vr = 0.3;
-					}
 					//setting distance delta
 					//---------------------------------setting tvec00 starts here--------------------------------------//
 					error.at<double>(0, 0)=tvecs[0][2] - required_distance;
 					//---------------------------------setting tvec00 ends here--------------------------------------//
 					error.at<double>(1, 0)=tvecs[0][0] - 0;
 					error.at<double>(2, 0)=tvecs[0][1] - 0;
-
+					
 					//---------------------------------setting rvec02 starts here--------------------------------------//
 					if(rvecs[0][2] < vr_error_bound || rvecs[0][2]> -vr_error_bound) //誤差很小 就忽略誤差
         			{
@@ -299,25 +505,27 @@ int main(int argc, char *argv[])
 						vx = output.at<double>(0, 0) * vx_amp;
 						//vx = 0;
 					}
-					else
-					{
+					else{
 						if(tvecs[0][2] - required_distance > 0)
-						{
 							vx = 0.4;
-						}
 						else
-						{
 							vx = -0.15;
-						}
 					}
-
+					
 					//vx = output.at<double>(0, 0) * 0;
 					//---------------------------------assign the vx and vr-------------------------------------------//
 					//by printing out the v_something to see if it is stable or not
 					//cout << "Error at vx: " << error.at<double>(0,0) << ", error at vr: " << error.at<double>(3,0) << endl;
 					cout << "******************************\nvx: " << vx << ", vr: " << vr << ", dis: " << tvecs[0][2] << endl;
 					//cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.at<double>(3, 0) <<endl;
+				
 				}
+				*/
+
+			}
+			else
+			{
+				vr = -0.3;
 			}
 			imshow("Aruco Marker Axis", image);
 		}
@@ -330,22 +538,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-/*朱蝶的code 基本上就是看pid的輸出值在進行倍率調整，太大就除太小就乘，但因為可能他們的跟我們的不一樣 所以就當參考，我直接用係數去改試試看
-time的話我再問問她是幹麻
-if(time>0){
-time--;
-vx=tmp;
-}else{
-if(_output.at<double>(0, 0)<=5 && _output.at<double>(0,0)>(-5)){
-	vx=0;
-}else if(_output.at<double>(0, 0)<=20 && _output.at<double>(0,0)>(-20)){
-	vx=_output.at<double>(0, 0)/170;
-}else if(_output.at<double>(0, 0)<=70 && _output.at<double>(0,0)>(-70)){
-	vx=_output.at<double>(0, 0)/200;
-}else if(_output.at<double>(0, 0)<=200 && _output.at<double>(0,0)>(-200)){
-	vx=_output.at<double>(0, 0)/200;
-}else{
-	time=1000;
-	tmp=_output.at<double>(0, 0)/200;
-}
-*/
