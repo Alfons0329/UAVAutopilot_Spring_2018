@@ -114,12 +114,17 @@ int main(int argc, char *argv[])
 	//-----------------------done data structure init------------------------------------------//
 	//
 	PIDManager myPID("pid.yaml");
-	// getchar();// stop a while for changing paper lololol
+	getchar();// stop a while for changing paper lololol
 	//-----------------------flying data structure init---------------------------------------//
 	bool flags[5] = {false};
 	int index[5] = {0};
 	int state = 0;
 	memset(flags, false, sizeof(flags));
+
+
+	unsigned long long int counter = 0;
+	struct timeval start, end;
+	gettimeofday(&start, 0);
 	while (1)
 	{
 		// Key input
@@ -155,26 +160,19 @@ int main(int argc, char *argv[])
 		if (key == 255)
 		{
 			//---------------------------------Main part of market detection----------------------------------------------//
-
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
-			cout << "State now: " << state << endl;
+			//cout << "State now: " << state << endl;
 			cout << "See marker: ";
 			for (int j = 0; j < ids.size(); j++)
 			{
 				flags[ids[j]-1] = true;
-				cout << " " << ids[j] << endl;
+				cout << " , " << ids[j] << endl;
 				index[ids[j]-1] = j;
 			}
-			cout << endl;
+			cout << "SEE MARKER END " << endl;
 			vector<Vec3d> rvecs, tvecs;
 			if (ids.size() > 0)
 			{
-				for (int j = 0; j < ids.size(); j++)
-				{
-					flags[ids[j] - 1] = true;
-					cout << "ids: " << ids[j] << endl;
-					index[ids[j] - 1] = j;
-				}
 				aruco::drawDetectedMarkers(image, aruco_corners, ids);
 				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
 				//draw axis for each marker
@@ -186,9 +184,8 @@ int main(int argc, char *argv[])
 			}
 			//---------------------------------------missions-----------------------------------------//
 			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
-			if(state == 0 && ids.size() == 0)
+			/*if(state == 0)
 			{
-				cout << "If block 1 "<<endl;
 				vr = -0.3; //Self rotate till id1 is seen
 				if(flags[0]) //看到一 進入狀態一
 				{
@@ -198,24 +195,57 @@ int main(int argc, char *argv[])
 			else if(state == 1 && flags[0]) //看到一 朝它飛過去，目前都是看得到一的狀態
 			{
 				cout << "If block 2 "<<endl;
-				vx = 1;
-				vy = ( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
-			}
-			else if(state == 0 && ids.size() == 0) //使用上方區塊的 飛一飛id一會飛出視線，所以此時代表要往id二看了
+				vx = 0.5;
+				vy = -( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
+			}*/
+			if(state == 0)
 			{
-				cout << "If block 3 "<<endl;
+				cout << " If block 0" <<endl;
+				vr = -0.3; //Self rotate till id1 is seen
+				if(flags[0]) //看到一 進入狀態一
+				{
+					state = 1;
+				}
+			}
+			else if(state == 1 && counter <= 60)
+			{
+				/*if(counter == 10000000)
+				{
+					gettimeofday(&end, 0);
+					ardrone.landing();
+					int sec =abs(end.tv_sec - start.tv_sec);
+					cout << "elapsed time "<<sec <<endl;
+					exit(0);
+				}*/
+				cout << "If block 1 "<<endl;
+				cout << "Counter " << counter++ << endl;
+				vx = 0.5;
+				vy = -0.25;//- (0.6 / 4.0f) * 1;
+				if(counter >= 60)
+				{
+					state = 1;
+					counter = 0xFFFFFFFF;
+				}
+			}
+			else if(state == 1 && flags[0] == false) //使用上方區塊的 飛一飛id一會飛出視線，所以此時代表要往id二看了
+			{
+				//cout << "If block 3 "<<endl;
+				vx = 0;
+				vy = 0;
 				vr = -0.3; //Self rotate till id2 is seen
 				if(flags[1]) //看到二 進入狀態二 此時也能矯正方向
 				{
 					state = 2;
 				}
 			}
-			else if(state == 2 && tvecs[index[1]][2] > required_distance) //持續朝id二飛行
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > required_distance) //持續朝id二飛行
 			{
 				cout << "If block 4 "<<endl;
 				vx = 1;
+				vy = 0;
+				vr = 0;
 			}
-			else if(state == 2 && tvecs[index[1]][2] < required_distance) //快到了 停下
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < required_distance) //快到了 停下
 			{
 				cout << "If block 5"<<endl;
 				vx = 0;//停下來
@@ -223,7 +253,7 @@ int main(int argc, char *argv[])
 			}
 			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
-			else if(state == 3 && !flags[2]) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
+			/*else if(state == 3 && !flags[2]) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
 			{
 				cout << "If block 6"<<endl;
 				vr = -0.3; //Self rotate till id3 is seen
@@ -256,15 +286,13 @@ int main(int argc, char *argv[])
 			//--------------------------------------降落 單元測試--------------------------------------//
 			else if(state == 6 && tvecs[index[3]][2] > required_distance)
 			{
-				cout << "If block 10"<<endl;
 				vx = 1;
 			}
-			else if(state == 6 && tvecs[index[3]][2] < required_distance)
+			else if(state == 6 && tvecs[index[3]][2] < required_distance + 20)
 			{
-				cout << "If block 11"<<endl;
 				vx = 0;
 				ardrone.landing();
-			}
+			}*/
 			//--------------------------------------降落 單元測試--------------------------------------//
 			imshow("Aruco Marker Axis", image);
 			memset(flags, false, sizeof(flags));
