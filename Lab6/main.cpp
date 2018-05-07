@@ -256,10 +256,12 @@ int main(int argc, char *argv[])
 			//--------------------------------------降落 單元測試--------------------------------------//
 			else if(state == 6 && tvecs[index[3]][2] > required_distance)
 			{
+				cout << "If block 10"<<endl;
 				vx = 1;
 			}
 			else if(state == 6 && tvecs[index[3]][2] < required_distance)
 			{
+				cout << "If block 11"<<endl;
 				vx = 0;
 				ardrone.landing();
 			}
