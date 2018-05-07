@@ -20,7 +20,7 @@ using namespace cv;
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
 const float markerLength = 9.4f;
-const float required_distance = 80.0f;
+const float required_distance = 100.0f;
 //------------------Marker dection board constants end here-----------------//
 //------------------velocity amplification and disamplification-------------//
 const int vx_amp = 10;
@@ -75,19 +75,7 @@ int main(int argc, char *argv[])
 	distCoeffs.at<double>(2,0) = -1.872194795688528e-02;
 	distCoeffs.at<double>(3,0) = 1.353528461095838e-03;
 	distCoeffs.at<double>(4,0) = 3.000881704739565e+02;
-	/*
-	if(load_camera_param(argv[1], cameraMatrix, distCoeffs))
-	{
-		//nop;
-		cout << "Loading param SUCCESSFULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
-		cout << "cameraMatrix " << cameraMatrix <<endl;
-		cout << "distCoeffs " << distCoeffs <<endl;
-	}
-	else
-	{
-		cout << "Loading param failed now manaully loading the parameters"<<endl;
-	}
-	*/
+
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
@@ -126,14 +114,12 @@ int main(int argc, char *argv[])
 	//-----------------------done data structure init------------------------------------------//
 	//
 	PIDManager myPID("pid.yaml");
-	getchar();// stop a while for changing paper lololol
-	bool flags[5];
-	int index[5];
-	int turn = 0;
-	for (int j = 0; j < 5; j++)
-	{
-		flags[j] = false;
-	}
+	// getchar();// stop a while for changing paper lololol
+	//-----------------------flying data structure init---------------------------------------//
+	bool flags[5] = {false};
+	int index[5] = {0};
+	int state = 0;
+	memset(flags, false, sizeof(flags));
 	while (1)
 	{
 		// Key input
@@ -171,370 +157,122 @@ int main(int argc, char *argv[])
 			//---------------------------------Main part of market detection----------------------------------------------//
 
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
-			// if at least one marker detected
-
+			cout << "State now: " << state << endl;
+			cout << "See marker: ";
+			for (int j = 0; j < ids.size(); j++)
+			{
+				flags[ids[j]-1] = true;
+				cout << " " << ids[j] << endl;
+				index[ids[j]-1] = j;
+			}
+			cout << endl;
+			vector<Vec3d> rvecs, tvecs;
 			if (ids.size() > 0)
 			{
 				for (int j = 0; j < ids.size(); j++)
 				{
-					flags[ids[j]-1] = true;
+					flags[ids[j] - 1] = true;
 					cout << "ids: " << ids[j] << endl;
-					index[ids[j]-1] = j;
+					index[ids[j] - 1] = j;
 				}
-
 				aruco::drawDetectedMarkers(image, aruco_corners, ids);
-				vector<Vec3d> rvecs, tvecs;
 				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
 				//draw axis for each marker
-				//the more the last coefficient , the more obviously the axis will be drawn
 				for (int i = 0; i < ids.size(); i++)
 				{
 					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
-					//cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+					cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
 				}
-				//---------------------------------------missions-----------------------------------------
-				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
-				{
-
-						Mat error (4, 1, CV_64F);
-						Mat output(4, 1, CV_64F);
-
-						cout << turn << endl;
-						if (flags[4] == true)
-						{
-							//error.at<float>(0,0) = tvecs[index[0]][1] - 10;
-							//error.at<float>(1,0) = tvecs[index[0]][0];
-							//error.at<float>(2,0) = 0;
-							ardrone.landing();
-							/*if (error.at<float>(0, 0) <5 && error.at<float>(1, 0) < 5)
-							{
-								ardrone.landing();
-							}*/
-						}
-						else if (flags[3] == true)
-						{
-							//error.at<float>(0,0) = tvecs[index[0]][2] - 80;
-							//error.at<float>(1,0) = tvecs[index[0]][0];
-							//error.at<float>(2,0) = tvecs[index[0]][1];
-							//error.at<float>(3,0) = tvecs[index[0]][2];
-							int INDEX = index[3];
-							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
-							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
-							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
-							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
-		        			{
-		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
-								{
-									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
-								}
-		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
-								{
-									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
-								}
-		        			}
-							myPID.getCommand(error, output);
-							
-							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
-							{
-								vr = 0;
-							}
-		        			else
-							{
-								vr = -output.at<double>(3, 0) * vr_amp;
-								//vr = 0;
-							}
-							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
-							{
-								vx = 0;
-							}
-		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
-							{
-								vx = output.at<double>(0, 0) * vx_amp;
-								//vx = 0;
-							}
-							else{
-								if(tvecs[INDEX][2] - required_distance > 0)
-									vx = 0.4;
-								else
-									vx = -0.15;
-							}
-							cout << "************************* SEE ARUCO 4 *****************************\n";
-							if (abs(output.at<double>(0, 0)) <= vx_lower_bound)
-							{
-								cout << "CHANGE CAMERA\n";
-								ardrone.setCamera(++mode % 4);
-							}
-							
-						}
-						else if (turn == 2)
-						{
-							vr = -0.3;
-						}
-						else if (flags[2] == true)
-						{
-							//error.at<float>(0,0) = tvecs[index[0]][2] - 100;
-							//error.at<float>(1,0) = tvecs[index[0]][0];
-							//error.at<float>(2,0) = tvecs[index[0]][1];
-							//error.at<float>(3,0) = tvecs[index[0]][2];
-							int INDEX = index[2];
-							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
-							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
-							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
-							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
-		        			{
-		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
-								{
-									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
-								}
-		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
-								{
-									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
-								}
-		        			}
-							myPID.getCommand(error, output);
-							
-							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
-							{
-								vr = 0;
-							}
-		        			else
-							{
-								vr = -output.at<double>(3, 0) * vr_amp;
-								//vr = 0;
-							}
-							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
-							{
-								vx = 0;
-							}
-		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
-							{
-								vx = output.at<double>(0, 0) * vx_amp;
-								//vx = 0;
-							}
-							else{
-								if(tvecs[INDEX][2] - required_distance > 0)
-									vx = 0.4;
-								else
-									vx = -0.15;
-							}
-							cout << "************************* SEE ARUCO 3 *****************************\n";
-							if (abs(output.at<double>(0, 0)) < vx_lower_bound)
-							{
-								turn = 2;
-							}
-						}
-						else if (turn == 1)
-						{
-							vr = -0.3;
-						}
-						else if (flags[1] == true)
-						{
-							//error.at<float>(0,0) = tvecs[index[0]][2] - 100;
-							//error.at<float>(1,0) = tvecs[index[0]][0];
-							//error.at<float>(2,0) = tvecs[index[0]][1];
-							//error.at<float>(3,0) = tvecs[index[0]][2];
-							int INDEX = index[1];
-							error.at<double>(0, 0)=tvecs[INDEX][2] - 50;
-							error.at<double>(1, 0)=tvecs[INDEX][1] - 0;
-							error.at<double>(2, 0)=tvecs[INDEX][0] - 0;
-							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
-		        			{
-		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
-								{
-									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
-								}
-		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
-								{
-									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
-								}
-		        			}
-							myPID.getCommand(error, output);
-							
-							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
-							{
-								vr = 0;
-							}
-		        			else
-							{
-								vr = -output.at<double>(3, 0) * vr_amp;
-								//vr = 0;
-							}
-							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
-							{
-								vx = 0;
-							}
-		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
-							{
-								vx = output.at<double>(0, 0) * vx_amp;
-								//vx = 0;
-							}
-							else{
-								if(tvecs[INDEX][2] - required_distance > 0)
-									vx = 0.4;
-								else
-									vx = -0.15;
-							}
-							cout << "************************* SEE ARUCO 2 *****************************\n";
-							if (abs(output.at<double>(0, 0)) < vx_lower_bound)
-							{
-								turn = 1;
-							}
-						}
-						else if(turn == -2){
-							vy = -0.3;
-							vx = 0;
-							vr = 0;
-							vz = 0;
-						}
-						else if (flags[0] == true)
-						{
-							//go foward
-							//error.at<float>(0,0) = tvecs[index[0]][2];
-							//error.at<float>(1,0) = tvecs[index[0]][0] - 80;
-							//error.at<float>(2,0) = tvecs[index[0]][1];
-							//error.at<float>(3,0) = tvecs[index[0]][2];
-							int INDEX = index[0];
-							error.at<double>(0, 0)=tvecs[INDEX][2] - required_distance;
-							error.at<double>(1, 0)=tvecs[INDEX][0] - 0;
-							error.at<double>(2, 0)=tvecs[INDEX][1] - 0;
-							if(rvecs[INDEX][2] < vr_error_bound || rvecs[INDEX][2]> -vr_error_bound) //誤差很小 就忽略誤差
-		        			{
-		            			if((rvecs[INDEX][0]>= 0 && rvecs[INDEX][2] >= 0 )|| (rvecs[INDEX][0]<= 0 && rvecs[INDEX][2] <= 0))//markerzai右邊同號
-								{
-									error.at<double>(3,0) = abs(rvecs[INDEX][2]);
-								}
-		            			else if ((rvecs[INDEX][0] < 0 && rvecs[INDEX][2] > 0) || (rvecs[INDEX][0] > 0 && rvecs[INDEX][2] < 0))//marker zai左邊異號
-								{
-									error.at<double>(3,0) = - abs(rvecs[INDEX][2]);
-								}
-		        			}
-							myPID.getCommand(error, output);
-							
-							if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
-							{
-								vr = 0;
-							}
-		        			else
-							{
-								vr = -output.at<double>(3, 0) * vr_amp;
-								//vr = 0;
-							}
-							if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
-							{
-								vx = 0;
-							}
-		        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
-							{
-								vx = output.at<double>(0, 0) * vx_amp;
-								//vx = 0;
-							}
-							else{
-								if(tvecs[INDEX][2] - required_distance > 0)
-									vx = 1;
-								else
-									vx = -0.15;
-							}
-							cout << "************************* SEE ARUCO 1 *****************************\n";
-							if(abs(error.at<double>(0, 0)) < vx_lower_bound){
-								turn = -2;
-							}
-						}
-
-						for (int j = 0; j < 5; j++)
-						{
-							flags[j] = false;
-						}
-					
-					
-				}
-
-				/*
-				if (!ardrone.onGround() && tvecs.size()) //tvecs has something to do
-				{
-					// implement your autopilot algorithm here
-					// only need to modify vx, vy, vz, vr
-					//error is {tvec[0][2] - 80.0f (required_distance), tvec[0][0], tvec[0][1], rvec[0][2]}
-					//drone x(forward and back) is corresponding to tvec[0][2]
-					//drone y(left and right) is corresponding to tvec[0][0]
-					//drone z(up and down) is corresponding to tvec[0][1]
-					
-					Mat error (4, 1, CV_64F);
-					Mat output(4, 1, CV_64F);
-					//setting distance delta
-					//---------------------------------setting tvec00 starts here--------------------------------------//
-					error.at<double>(0, 0)=tvecs[0][2] - required_distance;
-					//---------------------------------setting tvec00 ends here--------------------------------------//
-					error.at<double>(1, 0)=tvecs[0][0] - 0;
-					error.at<double>(2, 0)=tvecs[0][1] - 0;
-					
-					//---------------------------------setting rvec02 starts here--------------------------------------//
-					if(rvecs[0][2] < vr_error_bound || rvecs[0][2]> -vr_error_bound) //誤差很小 就忽略誤差
-        			{
-            			if((rvecs[0][0]>= 0 && rvecs[0][2] >= 0 )|| (rvecs[0][0]<= 0 && rvecs[0][2] <= 0))//markerzai右邊同號
-						{
-							error.at<double>(3,0) = abs(rvecs[0][2]);
-						}
-            			else if ((rvecs[0][0] < 0 && rvecs[0][2] > 0) || (rvecs[0][0] > 0 && rvecs[0][2] < 0))//marker zai左邊異號
-						{
-							error.at<double>(3,0) = - abs(rvecs[0][2]);
-						}
-        			}
-					//---------------------------------setting rvec02 ends here--------------------------------------//
-					//now doing pid
-					//doing the [P, I , D] by ourselves to implement the smoothing, how to check if it is smoothed?
-					myPID.getCommand(error, output);
-					//pid done
-
-        			//---------------------------------assign the vx and vr-------------------------------------------//
-					//amp代表放大係數
-        			if(abs(output.at<double>(3, 0)* vr_amp ) < vr_lower_bound) //too small to rotate no effect
-					{
-						vr = 0;
-					}
-        			else
-					{
-						vr = -output.at<double>(3, 0) * vr_amp;
-						//vr = 0;
-					}
-					if(abs(output.at<double>(0, 0)) < vx_lower_bound) //too small
-					{
-						vx = 0;
-					}
-        			else if(abs(output.at<double>(0, 0)) < vx_lower_bound * 3)
-					{
-						vx = output.at<double>(0, 0) * vx_amp;
-						//vx = 0;
-					}
-					else{
-						if(tvecs[0][2] - required_distance > 0)
-							vx = 0.4;
-						else
-							vx = -0.15;
-					}
-					
-					//vx = output.at<double>(0, 0) * 0;
-					//---------------------------------assign the vx and vr-------------------------------------------//
-					//by printing out the v_something to see if it is stable or not
-					//cout << "Error at vx: " << error.at<double>(0,0) << ", error at vr: " << error.at<double>(3,0) << endl;
-					cout << "******************************\nvx: " << vx << ", vr: " << vr << ", dis: " << tvecs[0][2] << endl;
-					//cout << "Unamplified Calibrated vx "<< output.at<double>(0, 0) << " Calibrated vr "<< output.at<double>(3, 0) <<endl;
-				
-				}
-				*/
-
 			}
-			else
+			//---------------------------------------missions-----------------------------------------//
+			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
+			if(state == 0 && ids.size() == 0)
 			{
-				vr = -0.3;
+				cout << "If block 1 "<<endl;
+				vr = -0.3; //Self rotate till id1 is seen
+				if(flags[0]) //看到一 進入狀態一
+				{
+					state = 1;
+				}
 			}
+			else if(state == 1 && flags[0]) //看到一 朝它飛過去，目前都是看得到一的狀態
+			{
+				cout << "If block 2 "<<endl;
+				vx = 1;
+				vy = ( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
+			}
+			else if(state == 0 && ids.size() == 0) //使用上方區塊的 飛一飛id一會飛出視線，所以此時代表要往id二看了
+			{
+				cout << "If block 3 "<<endl;
+				vr = -0.3; //Self rotate till id2 is seen
+				if(flags[1]) //看到二 進入狀態二 此時也能矯正方向
+				{
+					state = 2;
+				}
+			}
+			else if(state == 2 && tvecs[index[1]][2] > required_distance) //持續朝id二飛行
+			{
+				cout << "If block 4 "<<endl;
+				vx = 1;
+			}
+			else if(state == 2 && tvecs[index[1]][2] < required_distance) //快到了 停下
+			{
+				cout << "If block 5"<<endl;
+				vx = 0;//停下來
+				state = 3; //進入狀態三
+			}
+			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
+			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
+			else if(state == 3 && !flags[2]) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
+			{
+				cout << "If block 6"<<endl;
+				vr = -0.3; //Self rotate till id3 is seen
+				if(flags[2]) //看到三 此時也能矯正方向
+				{
+					state = 4;
+				}
+			}
+			else if(state == 4 && tvecs[index[2]][2] > required_distance)
+			{
+				vx = 1;
+				cout << "If block 7"<<endl;
+			}
+			else if(state == 4 && tvecs[index[2]][2] < required_distance)
+			{
+				cout << "If block 8"<<endl;
+				vx = 0;
+				state = 5;
+			}
+			else if(state == 5 && !flags[3])
+			{
+				cout << "If block 9"<<endl;
+				vr = -0.3; //Self rotate till id3 is seen
+				if(flags[4]) //看到三 此時也能矯正方向
+				{
+					state = 6;
+				}
+			}
+			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
+			//--------------------------------------降落 單元測試--------------------------------------//
+			else if(state == 6 && tvecs[index[3]][2] > required_distance)
+			{
+				vx = 1;
+			}
+			else if(state == 6 && tvecs[index[3]][2] < required_distance)
+			{
+				vx = 0;
+				ardrone.landing();
+			}
+			//--------------------------------------降落 單元測試--------------------------------------//
 			imshow("Aruco Marker Axis", image);
+			memset(flags, false, sizeof(flags));
+
 		}
 		ardrone.move3D(vx, vy, vz, vr);
 		// Display the image
-		imshow("camera", image);
+		// imshow("camera", image);
 	}
 	// See you
 	ardrone.close();
-
 	return 0;
 }
