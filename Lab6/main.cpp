@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 				cout << " If block 0" <<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.3; //Self rotate till id1 is seen
+				vr = 0.4; //Self rotate till id1 is seen 正是逆時針，負是順時針
 				if(flags[0]) //看到一 進入狀態一
 				{
 					state = 1;
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 				cout << "If block 3 "<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.3; //Self rotate till id2 is seen
+				vr = -0.4; //Self rotate till id2 is seen
 				if(flags[1]) //看到二 進入狀態二 此時也能矯正方向
 				{
 					state = 2;
@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 				cout << "If block 6"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.3; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
+				vr = -0.4; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
 				if(flags[2]) //看到三 此時也能矯正方向
 				{
 					state = 4;
@@ -272,7 +272,7 @@ int main(int argc, char *argv[])
 				cout << "If block 9"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.3; //Self rotate till id4 is seen
+				vr = -0.4; //Self rotate till id4 is seen
 				if(flags[3]) //看到四 此時也能矯正方向
 				{
 					state = 6;
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
 }
 /*if(state == 0)
 {
-	vr = -0.3; //Self rotate till id1 is seen
+	vr = -0.4; //Self rotate till id1 is seen
 	if(flags[0]) //看到一 進入狀態一
 	{
 		state = 1;
