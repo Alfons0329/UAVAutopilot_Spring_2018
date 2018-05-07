@@ -14,8 +14,6 @@
 using namespace std;
 using namespace cv;
 // --------------------------------------------------------------------------
-// main(Number of arguments, Argument values)
-// Description  : This is the entry point of the program.
 // Return value : SUCCESS:0  ERROR:-1
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
@@ -184,52 +182,34 @@ int main(int argc, char *argv[])
 			}
 			//---------------------------------------missions-----------------------------------------//
 			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
-			/*if(state == 0)
-			{
-				vr = -0.3; //Self rotate till id1 is seen
-				if(flags[0]) //看到一 進入狀態一
-				{
-					state = 1;
-				}
-			}
-			else if(state == 1 && flags[0]) //看到一 朝它飛過去，目前都是看得到一的狀態
-			{
-				cout << "If block 2 "<<endl;
-				vx = 0.5;
-				vy = -( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
-			}*/
+
 			if(state == 0)
 			{
 				cout << " If block 0" <<endl;
+				vx = 0;
+				vy = 0;
 				vr = -0.3; //Self rotate till id1 is seen
 				if(flags[0]) //看到一 進入狀態一
 				{
 					state = 1;
 				}
 			}
-			else if(state == 1 && counter <= 60)
+			else if(state == 1 && counter <= 60) //counter with trial and error
 			{
-				/*if(counter == 10000000)
-				{
-					gettimeofday(&end, 0);
-					ardrone.landing();
-					int sec =abs(end.tv_sec - start.tv_sec);
-					cout << "elapsed time "<<sec <<endl;
-					exit(0);
-				}*/
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
 				vx = 0.5;
 				vy = -0.25;//- (0.6 / 4.0f) * 1;
-				if(counter >= 60)
+				vr = 0;
+				if(counter >= 60) //counter with trial and error
 				{
 					state = 1;
 					counter = 0xFFFFFFFF;
 				}
 			}
-			else if(state == 1 && flags[0] == false) //使用上方區塊的 飛一飛id一會飛出視線，所以此時代表要往id二看了
+			else if(state == 1 && flags[0] == false) //利用counter成功飛越id一之後，就往id二飛行，但在那之前要先找到id2 因此自轉一波
 			{
-				//cout << "If block 3 "<<endl;
+				cout << "If block 3 "<<endl;
 				vx = 0;
 				vy = 0;
 				vr = -0.3; //Self rotate till id2 is seen
@@ -245,54 +225,75 @@ int main(int argc, char *argv[])
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < required_distance) //快到了 停下
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < required_distance) //快到了，停下，停在id二前面
 			{
 				cout << "If block 5"<<endl;
 				vx = 0;//停下來
+				vy = 0;
+				vr = 0;
 				state = 3; //進入狀態三
 			}
 			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
+			//--------------------------------------可以飛越id1並且航向id2 單元測試成功 2018/5/7 20:54-----------------------//
+			/* 5/8 代辦事項
+			1.確認vr 正負號與旋轉的方向，往正確的方向轉可以節省許多時間
+			2.把剩下的單元測試跑完
+			3.校正landing的下相機 用lab5已經寫好的code直接校正即可
+			*/
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
-			/*else if(state == 3 && !flags[2]) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
+			else if(state == 3 && flags[2] == false) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
 			{
 				cout << "If block 6"<<endl;
-				vr = -0.3; //Self rotate till id3 is seen
+				vx = 0;
+				vy = 0;
+				vr = -0.3; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
 				if(flags[2]) //看到三 此時也能矯正方向
 				{
 					state = 4;
 				}
 			}
-			else if(state == 4 && tvecs[index[2]][2] > required_distance)
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance) //持續朝id三飛行
 			{
-				vx = 1;
 				cout << "If block 7"<<endl;
+				vx = 1;
+				vy = 0;
+				vr = 0;
 			}
-			else if(state == 4 && tvecs[index[2]][2] < required_distance)
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] < required_distance) //快到了，停下，停在id三前面
 			{
 				cout << "If block 8"<<endl;
 				vx = 0;
+				vy = 0;
+				vr = 0;
 				state = 5;
 			}
-			else if(state == 5 && !flags[3])
+			else if(state == 5 && flags[3] == false) //停在id二前面而且看不到id四 就自轉，向右轉會比較快
 			{
 				cout << "If block 9"<<endl;
-				vr = -0.3; //Self rotate till id3 is seen
-				if(flags[4]) //看到三 此時也能矯正方向
+				vx = 0;
+				vy = 0;
+				vr = -0.3; //Self rotate till id4 is seen
+				if(flags[3]) //看到四 此時也能矯正方向
 				{
 					state = 6;
 				}
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 6 && tvecs[index[3]][2] > required_distance)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance)
 			{
 				vx = 1;
+				vy = 0;
+				vr = 0;
 			}
-			else if(state == 6 && tvecs[index[3]][2] < required_distance + 20)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15) //因為慣性，要遠一點
 			{
 				vx = 0;
+				vy = 0;
+				vr = 0;
+				ardrone.setCamera(++mode % 4);
 				ardrone.landing();
-			}*/
+			}
 			//--------------------------------------降落 單元測試--------------------------------------//
 			imshow("Aruco Marker Axis", image);
 			memset(flags, false, sizeof(flags));
@@ -306,3 +307,17 @@ int main(int argc, char *argv[])
 	ardrone.close();
 	return 0;
 }
+/*if(state == 0)
+{
+	vr = -0.3; //Self rotate till id1 is seen
+	if(flags[0]) //看到一 進入狀態一
+	{
+		state = 1;
+	}
+}
+else if(state == 1 && flags[0]) //看到一 朝它飛過去，目前都是看得到一的狀態
+{
+	cout << "If block 2 "<<endl;
+	vx = 0.5;
+	vy = -( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
+}*/
