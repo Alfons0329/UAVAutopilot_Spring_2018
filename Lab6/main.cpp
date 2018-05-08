@@ -18,7 +18,7 @@ using namespace cv;
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
 const float markerLength = 9.4f;
-const float required_distance = 100.0f;
+const float required_distance = 130.0f;
 //------------------Marker dection board constants end here-----------------//
 //------------------velocity amplification and disamplification-------------//
 const int vx_amp = 10;
@@ -160,14 +160,21 @@ int main(int argc, char *argv[])
 			//---------------------------------Main part of market detection----------------------------------------------//
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
 			//cout << "State now: " << state << endl;
-			cout << "See marker: ";
+			if(ids.size())
+			{
+				cout << "See marker: ";
+			}
 			for (int j = 0; j < ids.size(); j++)
 			{
 				flags[ids[j]-1] = true;
 				cout << " , " << ids[j] << endl;
 				index[ids[j]-1] = j;
 			}
-			cout << "SEE MARKER END " << endl;
+			if(ids.size())
+			{
+				cout << "SEE MARKER END " << endl;
+			}
+
 			vector<Vec3d> rvecs, tvecs;
 			if (ids.size() > 0)
 			{
@@ -178,6 +185,7 @@ int main(int argc, char *argv[])
 				{
 					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
 					cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+					cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
 				}
 			}
 			//---------------------------------------missions-----------------------------------------//
@@ -185,23 +193,23 @@ int main(int argc, char *argv[])
 
 			if(state == 0)
 			{
-				cout << " If block 0" <<endl;
+				// cout << " If block 0" <<endl;
 				vx = 0;
 				vy = 0;
-				vr = 0.4; //Self rotate till id1 is seen 正是逆時針，負是順時針
-				if(flags[0]) //看到一 進入狀態一
+				vr = 0.1; //Self rotate till id1 is seen 正是逆時針，負是順時針
+				if(flags[0] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到一 進入狀態一
 				{
 					state = 1;
 				}
 			}
-			else if(state == 1 && counter <= 60) //counter with trial and error
+			else if(state == 1 && counter <= 105) //counter with trial and error
 			{
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
-				vx = 0.5;
-				vy = -0.25;//- (0.6 / 4.0f) * 1;
+				vx = 0.35;
+				vy = -0.03;//- (0.8 / 4.0f) * 1;
 				vr = 0;
-				if(counter >= 60) //counter with trial and error
+				if(counter >= 105) //counter with trial and error
 				{
 					state = 1;
 					counter = 0xFFFFFFFF;
@@ -212,8 +220,8 @@ int main(int argc, char *argv[])
 				cout << "If block 3 "<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.4; //Self rotate till id2 is seen
-				if(flags[1]) //看到二 進入狀態二 此時也能矯正方向
+				vr = -0.1; //Self rotate till id2 is seen
+				if(flags[1] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8 ) //看到二 進入狀態二 此時也能矯正方向
 				{
 					state = 2;
 				}
@@ -241,13 +249,13 @@ int main(int argc, char *argv[])
 			3.校正landing的下相機 用lab5已經寫好的code直接校正即可
 			*/
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
-			else if(state == 3 && flags[2] == false) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
+			else if(state == 3) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
 			{
 				cout << "If block 6"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.4; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
-				if(flags[2]) //看到三 此時也能矯正方向
+				vr = -0.1; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
+				if(flags[2] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到三 此時也能矯正方向
 				{
 					state = 4;
 				}
@@ -267,32 +275,46 @@ int main(int argc, char *argv[])
 				vr = 0;
 				state = 5;
 			}
-			else if(state == 5 && flags[3] == false) //停在id二前面而且看不到id四 就自轉，向右轉會比較快
+			else if(state == 5 ) //停在id二前面而且看不到id四 就自轉，向右轉會比較快
 			{
 				cout << "If block 9"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.4; //Self rotate till id4 is seen
-				if(flags[3]) //看到四 此時也能矯正方向
+				vr = -0.1; //Self rotate till id4 is seen
+				if(flags[3] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到四 此時也能矯正方向
 				{
 					state = 6;
 				}
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 15)
 			{
+				cout << "If block 10"<<endl;
 				vx = 1;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15) //因為慣性，要遠一點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15 && tvecs[index[3]][2] > 90.0) //因為慣性，要遠一點
 			{
+				cout << "If block 11"<<endl;
+				vx = 0.5;
+				vy = 0;
+				vr = 0;
+			}
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < 90.0) //慢慢接近終點
+			{
+				cout << "If block 12"<<endl;
 				vx = 0;
 				vy = 0;
 				vr = 0;
 				ardrone.setCamera(++mode % 4);
 				ardrone.landing();
+			}
+			else //deafult
+			{
+				cout << "Default"<<endl;
+				vr = -0.30;
 			}
 			//--------------------------------------降落 單元測試--------------------------------------//
 			imshow("Aruco Marker Axis", image);
