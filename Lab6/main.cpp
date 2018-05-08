@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 				// cout << " If block 0" <<endl;
 				vx = 0;
 				vy = 0;
-				vr = 0.1; //Self rotate till id1 is seen 正是逆時針，負是順時針
+				vr = 0.15; //Self rotate till id1 is seen 正是逆時針，負是順時針
 				if(flags[0] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到一 進入狀態一
 				{
 					state = 1;
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
 				vx = 0.35;
-				vy = -0.03;//- (0.8 / 4.0f) * 1;
+				vy = -0.08;//- (0.8 / 4.0f) * 1;
 				vr = 0;
 				if(counter >= 105) //counter with trial and error
 				{
@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > required_distance) //持續朝id二飛行
 			{
 				cout << "If block 4 "<<endl;
-				vx = 1;
+				vx = 0.7;
 				vy = 0;
 				vr = 0;
 			}
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 				cout << "If block 6"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.1; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
+				vr = -0.2; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
 				if(flags[2] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到三 此時也能矯正方向
 				{
 					state = 4;
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance) //持續朝id三飛行
 			{
 				cout << "If block 7"<<endl;
-				vx = 1;
+				vx = 0.8;
 				vy = 0;
 				vr = 0;
 			}
@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
 				cout << "If block 9"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.1; //Self rotate till id4 is seen
+				vr = -0.2; //Self rotate till id4 is seen
 				if(flags[3] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到四 此時也能矯正方向
 				{
 					state = 6;
@@ -291,14 +291,14 @@ int main(int argc, char *argv[])
 			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 15)
 			{
 				cout << "If block 10"<<endl;
-				vx = 1;
+				vx = 0.5;
 				vy = 0;
 				vr = 0;
 			}
 			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15 && tvecs[index[3]][2] > 90.0) //因為慣性，要遠一點
 			{
 				cout << "If block 11"<<endl;
-				vx = 0.5;
+				vx = 0.3;
 				vy = 0;
 				vr = 0;
 			}
