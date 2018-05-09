@@ -18,7 +18,7 @@ using namespace cv;
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
 const float markerLength = 9.4f;
-const float required_distance = 130.0f;
+const float required_distance = 110.0f;
 //------------------Marker dection board constants end here-----------------//
 //------------------velocity amplification and disamplification-------------//
 const int vx_amp = 10;
@@ -59,20 +59,20 @@ int main(int argc, char *argv[])
 	//-----------------------camera parameter loading for ardrone----------------------------------//
 	Mat image;
 	Mat cameraMatrix(3,3,CV_64F), distCoeffs(1,5,CV_64F);
-	cameraMatrix.at<double>(0,0) = 5.11897658982521e+02;
+	cameraMatrix.at<double>(0,0) = 5.660229527130537e+02;
 	cameraMatrix.at<double>(0,1) = 0.;
-	cameraMatrix.at<double>(0,2) = 3.165825647196696e+02;
+	cameraMatrix.at<double>(0,2) = 3.340570397444376e+02;
 	cameraMatrix.at<double>(1,0) = 0.;
-	cameraMatrix.at<double>(1,1) = 5.081336169143607e+02;
-	cameraMatrix.at<double>(1,2) = 1.903117849450484e+02;
+	cameraMatrix.at<double>(1,1) = 5.664897255182701e+02;
+	cameraMatrix.at<double>(1,2) = 1.690819574644224e+02;
 	cameraMatrix.at<double>(2,0) = 0.;
 	cameraMatrix.at<double>(2,1) = 0.;
 	cameraMatrix.at<double>(2,2) = 1.;
-	distCoeffs.at<double>(0,0) = 8.7295277725232e-01;
-	distCoeffs.at<double>(1,0) = -3.915795335526079e+01;
-	distCoeffs.at<double>(2,0) = -1.872194795688528e-02;
-	distCoeffs.at<double>(3,0) = 1.353528461095838e-03;
-	distCoeffs.at<double>(4,0) = 3.000881704739565e+02;
+	distCoeffs.at<double>(0,0) = -5.060402671581601e-01;
+	distCoeffs.at<double>(1,0) = 2.940530016423599e-02;
+	distCoeffs.at<double>(2,0) = 1.774436061695057e-04;
+	distCoeffs.at<double>(3,0) = -3.99927841858243e-03;
+	distCoeffs.at<double>(4,0) = 1.26044448534097;
 
 	if (!ardrone.open())
 	{
@@ -196,26 +196,26 @@ int main(int argc, char *argv[])
 				// cout << " If block 0" <<endl;
 				vx = 0;
 				vy = 0;
-				vr = 0.15; //Self rotate till id1 is seen 正是逆時針，負是順時針
-				if(flags[0] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到一 進入狀態一
+				vr = 0.12; //Self rotate till id1 is seen 正是逆時針，負是順時針
+				if(flags[0] && rvecs[0][2] < 0.7 && rvecs[0][2] > -0.7) //看到一 進入狀態一
 				{
 					state = 1;
 				}
 			}
-			else if(state == 1 && counter <= 105) //counter with trial and error
+			else if(state == 1 && counter <= 120) //counter with trial and error
 			{
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
-				vx = 0.35;
-				vy = -0.08;//- (0.8 / 4.0f) * 1;
+				vx = 0.4;
+				vy = 0.07;//- (0.8 / 4.0f) * 1;
 				vr = 0;
-				if(counter >= 105) //counter with trial and error
+				if(counter > 120) //counter with trial and error
 				{
 					state = 1;
 					counter = 0xFFFFFFFF;
 				}
 			}
-			else if(state == 1 && flags[0] == false) //利用counter成功飛越id一之後，就往id二飛行，但在那之前要先找到id2 因此自轉一波
+			else if(state == 1) //利用counter成功飛越id一之後，就往id二飛行，但在那之前要先找到id2 因此自轉一波
 			{
 				cout << "If block 3 "<<endl;
 				vx = 0;
@@ -226,14 +226,14 @@ int main(int argc, char *argv[])
 					state = 2;
 				}
 			}
-			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > required_distance) //持續朝id二飛行
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > (required_distance) && flags[1] == true) //持續朝id二飛行
 			{
 				cout << "If block 4 "<<endl;
-				vx = 0.7;
+				vx = 0.2;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < required_distance) //快到了，停下，停在id二前面
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < (required_distance) && flags[1] == true) //快到了，停下，停在id二前面
 			{
 				cout << "If block 5"<<endl;
 				vx = 0;//停下來
@@ -254,20 +254,20 @@ int main(int argc, char *argv[])
 				cout << "If block 6"<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.2; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
+				vr = -0.13; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
 				if(flags[2] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到三 此時也能矯正方向
 				{
 					state = 4;
 				}
 			}
-			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance) //持續朝id三飛行
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance && flags[2] == true) //持續朝id三飛行
 			{
 				cout << "If block 7"<<endl;
-				vx = 0.8;
+				vx = 0.32;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] < required_distance) //快到了，停下，停在id三前面
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] < required_distance && flags[2] == true) //快到了，停下，停在id三前面
 			{
 				cout << "If block 8"<<endl;
 				vx = 0;
@@ -288,21 +288,21 @@ int main(int argc, char *argv[])
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 15)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 15 && flags[3] == true)
 			{
 				cout << "If block 10"<<endl;
-				vx = 0.5;
+				vx = 0.32;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15 && tvecs[index[3]][2] > 90.0) //因為慣性，要遠一點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15 && tvecs[index[3]][2] > 90.0 && flags[3] == true) //因為慣性，要遠一點
 			{
 				cout << "If block 11"<<endl;
-				vx = 0.3;
+				vx = 0.15;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < 90.0) //慢慢接近終點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < 90.0 && flags[3] == true) //慢慢接近終點
 			{
 				cout << "If block 12"<<endl;
 				vx = 0;
@@ -313,14 +313,36 @@ int main(int argc, char *argv[])
 			}
 			else //deafult
 			{
-				cout << "Default"<<endl;
-				vr = -0.30;
+				switch(state)
+				{
+					case 4:
+					{
+						cout << "Default 4"<<endl;
+						vx = 0.32;
+						vr = 0;
+						break;
+					}
+					case 6:
+					{
+						cout << "Default"<<endl;
+						vx = 0.32;
+						vr = 0;
+						break;
+					}
+					default:
+					{
+						vr = -0.15;
+						cout << "Default"<<endl;
+						break;
+					}
+				}
 			}
 			//--------------------------------------降落 單元測試--------------------------------------//
 			imshow("Aruco Marker Axis", image);
 			memset(flags, false, sizeof(flags));
 
 		}
+		printf("vx : %f vy : %f vr %f\n", vx, vy, vr);
 		ardrone.move3D(vx, vy, vz, vr);
 		// Display the image
 		// imshow("camera", image);
