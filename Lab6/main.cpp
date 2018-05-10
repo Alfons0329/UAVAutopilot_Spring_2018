@@ -18,7 +18,7 @@ using namespace cv;
 // --------------------------------------------------------------------------
 //------------------Marker dection board constants--------------------------//
 const float markerLength = 9.4f;
-const float required_distance = 110.0f;
+const float required_distance = 90.0f;
 //------------------Marker dection board constants end here-----------------//
 //------------------velocity amplification and disamplification-------------//
 const int vx_amp = 10;
@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
 	bool flags[5] = {false};
 	int index[5] = {0};
 	int state = 0;
+	int final_cnt = 0;
 	memset(flags, false, sizeof(flags));
 
 
@@ -197,19 +198,19 @@ int main(int argc, char *argv[])
 				vx = 0;
 				vy = 0;
 				vr = 0.12; //Self rotate till id1 is seen 正是逆時針，負是順時針
-				if(flags[0] && rvecs[0][2] < 0.7 && rvecs[0][2] > -0.7) //看到一 進入狀態一
+				if(flags[0] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.7) //看到一 進入狀態一
 				{
 					state = 1;
 				}
 			}
-			else if(state == 1 && counter <= 120) //counter with trial and error
+			else if(state == 1 && counter <= 140) //counter with trial and error
 			{
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
 				vx = 0.4;
-				vy = 0.07;//- (0.8 / 4.0f) * 1;
+				vy = 0.09;//- (0.8 / 4.0f) * 1;
 				vr = 0;
-				if(counter > 120) //counter with trial and error
+				if(counter > 140) //counter with trial and error
 				{
 					state = 1;
 					counter = 0xFFFFFFFF;
@@ -220,20 +221,20 @@ int main(int argc, char *argv[])
 				cout << "If block 3 "<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.1; //Self rotate till id2 is seen
-				if(flags[1] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8 ) //看到二 進入狀態二 此時也能矯正方向
+				vr = -0.13; //Self rotate till id2 is seen
+				if(flags[1] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.8 ) //看到二 進入狀態二 此時也能矯正方向
 				{
 					state = 2;
 				}
 			}
-			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > (required_distance) && flags[1] == true) //持續朝id二飛行
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] > required_distance && flags[1] == true) //持續朝id二飛行
 			{
 				cout << "If block 4 "<<endl;
 				vx = 0.2;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < (required_distance) && flags[1] == true) //快到了，停下，停在id二前面
+			else if(state == 2 && ids.size() > 0 && tvecs[index[1]][2] < required_distance  && flags[1] == true) //快到了，停下，停在id二前面
 			{
 				cout << "If block 5"<<endl;
 				vx = 0;//停下來
@@ -255,19 +256,19 @@ int main(int argc, char *argv[])
 				vx = 0;
 				vy = 0;
 				vr = -0.13; //Self rotate till id3 is seen（如果要往另一個方向比較快，就加-號 到時候再看看）
-				if(flags[2] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到三 此時也能矯正方向
+				if(flags[2] && rvecs[0][2] < 0.4 && rvecs[0][2] > -0.4) //看到三 此時也能矯正方向
 				{
 					state = 4;
 				}
 			}
-			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance && flags[2] == true) //持續朝id三飛行
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] > required_distance + 20 && flags[2] == true) //持續朝id三飛行
 			{
 				cout << "If block 7"<<endl;
-				vx = 0.32;
+				vx = 0.25;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] < required_distance && flags[2] == true) //快到了，停下，停在id三前面
+			else if(state == 4 && ids.size() > 0 && tvecs[index[2]][2] < required_distance + 20 && flags[2] == true) //快到了，停下，停在id三前面
 			{
 				cout << "If block 8"<<endl;
 				vx = 0;
@@ -281,35 +282,42 @@ int main(int argc, char *argv[])
 				vx = 0;
 				vy = 0;
 				vr = -0.2; //Self rotate till id4 is seen
-				if(flags[3] && rvecs[0][2] < 0.8 && rvecs[0][2] > -0.8) //看到四 此時也能矯正方向
+				if(flags[3] && rvecs[0][2] < 0.4 && rvecs[0][2] > -0.4) //看到四 此時也能矯正方向
 				{
 					state = 6;
 				}
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 15 && flags[3] == true)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 20 && flags[3] == true)
 			{
 				cout << "If block 10"<<endl;
 				vx = 0.32;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < required_distance + 15 && tvecs[index[3]][2] > 90.0 && flags[3] == true) //因為慣性，要遠一點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance && tvecs[index[3]][2] <= required_distance + 20 && flags[3] == true) //因為慣性，要遠一點
 			{
 				cout << "If block 11"<<endl;
 				vx = 0.15;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] < 90.0 && flags[3] == true) //慢慢接近終點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance && flags[3] == true) //慢慢接近終點
 			{
 				cout << "If block 12"<<endl;
-				vx = 0;
-				vy = 0;
-				vr = 0;
-				ardrone.setCamera(++mode % 4);
-				ardrone.landing();
+				final_cnt++;
+				if(final_cnt >= 3)
+				{
+					ardrone.setCamera(++mode % 4);
+					ardrone.landing();
+				}
+				else
+				{
+					vx = 0.15;
+					vy = 0;
+					vr = 0;
+				}
 			}
 			else //deafult
 			{
@@ -317,21 +325,38 @@ int main(int argc, char *argv[])
 				{
 					case 4:
 					{
-						cout << "Default 4"<<endl;
-						vx = 0.32;
-						vr = 0;
+						if(ids.size())
+						{
+							cout << "Default 4"<<endl;
+							vx = 0.32;
+							vr = 0;
+						}
+						else
+						{
+							vx = 0;
+						}
 						break;
 					}
 					case 6:
 					{
-						cout << "Default"<<endl;
-						vx = 0.32;
-						vr = 0;
+						if(ids.size())
+						{
+							cout << "Default"<<endl;
+							vx = 0.32;
+							vr = 0;
+						}
+						else
+						{
+							vx = 0;
+						}
 						break;
 					}
 					default:
 					{
-						vr = -0.15;
+						if(!ids.size())
+						{
+							vr = -0.15;
+						}
 						cout << "Default"<<endl;
 						break;
 					}
