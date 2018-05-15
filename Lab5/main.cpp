@@ -188,7 +188,12 @@ int main(int argc, char *argv[])
     Mat image;
     //-----------------------camera calibration for ardrone----------------------------------//
     Mat cameraMatrix, distCoeffs;
-    my_camera_calibration(cameraMatrix, distCoeffs, "ardrone_config.xml");
+    // Change camera
+    static int mode = 0;
+    // int key = waitKey(33);
+    ardrone.setCamera((++mode) % 4);
+    cout << "calibate "<< endl;
+    my_camera_calibration(cameraMatrix, distCoeffs, argv[1]);
     cout << "cameraMatrix is "<<cameraMatrix<<endl;
     cout << "distCoeffs is "<<distCoeffs<<endl;
     //-----------------------drone aruco checking and detection data structure init------------------------------//
@@ -226,9 +231,6 @@ int main(int argc, char *argv[])
         if (key == 'a') vz = -1.0;
         ardrone.move3D(vx, vy, vz, vr);
 
-        // Change camera
-        static int mode = 0;
-        if (key == 'c') ardrone.setCamera(++mode % 4);
 
         // Display the image
         //imshow("camera", image);
@@ -247,6 +249,7 @@ int main(int argc, char *argv[])
             {
                 aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
                 cout<<"Detected ArUco markers "<<ids.size()<< "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+                cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
             }
         }
         imshow("Aruco Market Axis", image);

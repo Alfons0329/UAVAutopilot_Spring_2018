@@ -74,6 +74,22 @@ int main(int argc, char *argv[])
 	distCoeffs.at<double>(3,0) = -3.99927841858243e-03;
 	distCoeffs.at<double>(4,0) = 1.26044448534097;
 
+	Mat cameraMatrix2(3,3,CV_64F), distCoeffs2(1,5,CV_64F);
+	cameraMatrix2.at<double>(0,0) = 6.9332526624253353e+02;
+	cameraMatrix2.at<double>(0,1) = 0.;
+	cameraMatrix2.at<double>(0,2) = 2.9322521936992302e+02;
+	cameraMatrix2.at<double>(1,0) = 0.;
+	cameraMatrix2.at<double>(1,1) = 7.0206548894894274e+02;
+	cameraMatrix2.at<double>(1,2) = 2.1517298545590140e+02;
+	cameraMatrix2.at<double>(2,0) = 0.;
+	cameraMatrix2.at<double>(2,1) = 0.;
+	cameraMatrix2.at<double>(2,2) = 1.;
+	distCoeffs2.at<double>(0,0) = 1.5826748207215535e-01;
+	distCoeffs2.at<double>(1,0) = 3.3513300662473128e-01;
+	distCoeffs2.at<double>(2,0) = 2.7193440572564974e-02;
+	distCoeffs2.at<double>(3,0) = -8.7146222209221226e-03;
+	distCoeffs2.at<double>(4,0) = -4.1097722303957314e+00;
+
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
@@ -122,6 +138,7 @@ int main(int argc, char *argv[])
 
 
 	unsigned long long int counter = 0;
+	unsigned long long int landing_counter = 0;
 	struct timeval start, end;
 	gettimeofday(&start, 0);
 	while (1)
@@ -150,6 +167,7 @@ int main(int argc, char *argv[])
 		if (key == 'l') vy = -1.0;
 		if (key == 'q') vz = 1.0;
 		if (key == 'a') vz = -1.0;
+		if (key == 'f') state = 5;
 
 
 		// Change camera
@@ -161,6 +179,10 @@ int main(int argc, char *argv[])
 			//---------------------------------Main part of market detection----------------------------------------------//
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
 			//cout << "State now: " << state << endl;
+			if(ardrone.onGround())
+			{
+				state = 0;
+			}
 			if(ids.size())
 			{
 				cout << "See marker: ";
@@ -179,14 +201,29 @@ int main(int argc, char *argv[])
 			vector<Vec3d> rvecs, tvecs;
 			if (ids.size() > 0)
 			{
-				aruco::drawDetectedMarkers(image, aruco_corners, ids);
-				aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
-				//draw axis for each marker
-				for (int i = 0; i < ids.size(); i++)
+				if(mode == 0)
 				{
-					aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
-					cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
-					cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
+					aruco::drawDetectedMarkers(image, aruco_corners, ids);
+					aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix, distCoeffs, rvecs, tvecs);
+					//draw axis for each marker
+					for (int i = 0; i < ids.size(); i++)
+					{
+						aruco::drawAxis(image, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10); //if read
+						cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+						cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
+					}
+				}
+				else if(mode == 1)
+				{
+					aruco::drawDetectedMarkers(image, aruco_corners, ids);
+					aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix2, distCoeffs2, rvecs, tvecs);
+					//draw axis for each marker
+					for (int i = 0; i < ids.size(); i++)
+					{
+						aruco::drawAxis(image, cameraMatrix2, distCoeffs2, rvecs[i], tvecs[i], 10); //if read
+						cout << "Detected ArUco markers " << ids.size() << "x,y,z = " << tvecs[0] << endl; //x,y,z in the space
+						cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
+					}
 				}
 			}
 			//---------------------------------------missions-----------------------------------------//
@@ -289,34 +326,53 @@ int main(int argc, char *argv[])
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 20 && flags[3] == true)
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 30 && flags[3] == true)
 			{
 				cout << "If block 10"<<endl;
 				vx = 0.32;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance && tvecs[index[3]][2] <= required_distance + 20 && flags[3] == true) //因為慣性，要遠一點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 25 && tvecs[index[3]][2] <= required_distance + 30 && flags[3] == true) //因為慣性，要遠一點
 			{
 				cout << "If block 11"<<endl;
-				vx = 0.15;
+				vx = 0.18;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance && flags[3] == true) //慢慢接近終點
+			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance + 25 && flags[3] == true) //慢慢接近終點
 			{
 				cout << "If block 12"<<endl;
 				final_cnt++;
 				if(final_cnt >= 3)
 				{
+					cout << "Chamge camera !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------   " <<endl;
 					ardrone.setCamera(++mode % 4);
-					ardrone.landing();
+					state = 7;
+					ids.resize(0);
 				}
 				else
 				{
 					vx = 0.15;
 					vy = 0;
 					vr = 0;
+				}
+			}
+			else if(state == 7) //final landing
+			{
+				cout << " Landinmg counter "<< landing_counter <<endl;
+				if(flags[4] == true || landing_counter == 400)
+				{
+					cout << "Real landing "<<landing_counter << " ids size " << ids.size() <<endl;
+					ardrone.landing();
+					exit(0);
+				}
+				else
+				{
+					vx = 0;
+					vy = 0;
+					vr = 0.15;
+					++landing_counter;
 				}
 			}
 			else //deafult
@@ -334,6 +390,7 @@ int main(int argc, char *argv[])
 						else
 						{
 							vx = 0;
+							cout << "Default 4 else"<<endl;
 						}
 						break;
 					}
@@ -341,12 +398,13 @@ int main(int argc, char *argv[])
 					{
 						if(ids.size())
 						{
-							cout << "Default"<<endl;
+							cout << "Default 6"<<endl;
 							vx = 0.32;
 							vr = 0;
 						}
 						else
 						{
+							cout << "Default 6 else"<<endl;
 							vx = 0;
 						}
 						break;
