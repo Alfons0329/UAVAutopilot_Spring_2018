@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
 				vx = 0.4;
-				vy = 0.09;//- (0.8 / 4.0f) * 1;
+				vy = 0.12;//- (0.8 / 4.0f) * 1;
 				vr = 0;
 				if(counter > 140) //counter with trial and error
 				{
@@ -412,6 +412,10 @@ int main(int argc, char *argv[])
 					default:
 					{
 						if(!ids.size())
+						{
+							vr = -0.15;
+						}
+						else if (state == 1)
 						{
 							vr = -0.15;
 						}
