@@ -57,8 +57,14 @@ int main(int argc, char *argv[])
 {
 	//----------------------face init--------------------------------------------------------------//
 	CascadeClassifier face_cascade;
-    face_cascade.load( "~opencv/opencv-3.2.0/data/haarcascade_frontalface_alt2.xml" );
-    face_cascade.load( "~opencv/opencv-3.2.0/data/haarcascade_frontalface_alt.xml" );
+    if(!face_cascade.load( "haarcascade_frontalface_alt2.xml" ))
+	{
+		cout << "Load XML filaed !!!! " << endl;
+	}
+    if(!face_cascade.load( "haarcascade_frontalface_alt.xml" ))
+	{
+		cout << "Load XML filaed !!!! " << endl;
+	}
 	vector<Rect> faces;
 	// Initialize
 	//-----------------------camera parameter loading for ardrone----------------------------------//
@@ -98,11 +104,11 @@ int main(int argc, char *argv[])
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
-		return -1;
+		// return -1;
 	}
 
 	// Battery
-	cout << "Battery = " << ardrone.getBatteryPercentage() << "[%]" << endl;
+	// cout << "Battery = " << ardrone.getBatteryPercentage() << "[%]" << endl;
 
 	// Instructions
 	cout << "***************************************" << endl;
@@ -124,7 +130,6 @@ int main(int argc, char *argv[])
 	cout << "*    'Esc'   -- Exit                  *" << endl;
 	cout << "*                                     *" << endl;
 	cout << "***************************************" << endl;
-	//rvec 02 對應vr
 
 	//-----------------------drone aruco checking and detection data structure init------------------------------//
 	cv::Ptr<aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
@@ -133,7 +138,7 @@ int main(int argc, char *argv[])
 	//-----------------------done data structure init------------------------------------------//
 	//
 	PIDManager myPID("pid.yaml");
-	getchar();// stop a while for changing paper lololol
+	// getchar();// stop a while for changing paper lololol
 	//-----------------------flying data structure init---------------------------------------//
 	bool flags[5] = {false};
 	int index[5] = {0};
@@ -144,20 +149,21 @@ int main(int argc, char *argv[])
 
 	unsigned long long int counter = 0;
 	unsigned long long int landing_counter = 0;
-	struct timeval start, end;
-	gettimeofday(&start, 0);
 
-	cout << "Start face detection "<< endl;
+
 	while(1)
 	{
-		Mat image;
-		image = ardrone.getImage();
+		int key = waitKey(33);
+		if (key == 0x1b) break;
+		VideoCapture cap(0);
+		cap >> image;
+		// image = ardrone.getImage();
 		face_cascade.detectMultiScale( image, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
 		for( int i = 0; i < faces.size(); i++ )
 	    {
 	        Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
 	        ellipse( image, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
-			printf("Find %d faces, face width %lf, face height %lf \n",faces.size() ,faces[i].width , faces[i].height);
+			printf("Find %d faces, face width %d, face height %d \n",faces.size() ,faces[i].width , faces[i].height);
 	    }
 	    // namedWindow("Detected Face", 0);
 	    imshow( "Detected Face", image );
