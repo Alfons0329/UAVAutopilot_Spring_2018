@@ -59,47 +59,49 @@ int main(int argc, char *argv[])
 	CascadeClassifier face_cascade;
     if(!face_cascade.load( "haarcascade_frontalface_alt2.xml" ))
 	{
-		cout << "Load XML filaed !!!! " << endl;
+		cout << "Load XML failed !!!! " << endl;
 	}
     if(!face_cascade.load( "haarcascade_frontalface_alt.xml" ))
 	{
-		cout << "Load XML filaed !!!! " << endl;
+		cout << "Load XML failed !!!! " << endl;
 	}
 	vector<Rect> faces;
 	// Initialize
 	//-----------------------camera parameter loading for ardrone----------------------------------//
 	Mat image;
 	Mat cameraMatrix(3,3,CV_64F), distCoeffs(1,5,CV_64F);
-	cameraMatrix.at<double>(0,0) = 5.660229527130537e+02;
-	cameraMatrix.at<double>(0,1) = 0.;
-	cameraMatrix.at<double>(0,2) = 3.340570397444376e+02;
-	cameraMatrix.at<double>(1,0) = 0.;
-	cameraMatrix.at<double>(1,1) = 5.664897255182701e+02;
-	cameraMatrix.at<double>(1,2) = 1.690819574644224e+02;
-	cameraMatrix.at<double>(2,0) = 0.;
-	cameraMatrix.at<double>(2,1) = 0.;
-	cameraMatrix.at<double>(2,2) = 1.;
-	distCoeffs.at<double>(0,0) = -5.060402671581601e-01;
-	distCoeffs.at<double>(1,0) = 2.940530016423599e-02;
-	distCoeffs.at<double>(2,0) = 1.774436061695057e-04;
-	distCoeffs.at<double>(3,0) = -3.99927841858243e-03;
-	distCoeffs.at<double>(4,0) = 1.26044448534097;
+	load_camera_param("ardrone_config.xml",cameraMatrix , distCoeffs);
+	cout << "cameraMatrix " <<cameraMatrix << " \n " << distCoeffs << "--------------------- \n";
+	// cameraMatrix.at<double>(0,0) = 5.660229527130537e+02;
+	// cameraMatrix.at<double>(0,1) = 0.;
+	// cameraMatrix.at<double>(0,2) = 3.340570397444376e+02;
+	// cameraMatrix.at<double>(1,0) = 0.;
+	// cameraMatrix.at<double>(1,1) = 5.664897255182701e+02;
+	// cameraMatrix.at<double>(1,2) = 1.690819574644224e+02;
+	// cameraMatrix.at<double>(2,0) = 0.;
+	// cameraMatrix.at<double>(2,1) = 0.;
+	// cameraMatrix.at<double>(2,2) = 1.;
+	// distCoeffs.at<double>(0,0) = -5.060402671581601e-01;
+	// distCoeffs.at<double>(1,0) = 2.940530016423599e-02;
+	// distCoeffs.at<double>(2,0) = 1.774436061695057e-04;
+	// distCoeffs.at<double>(3,0) = -3.99927841858243e-03;
+	// distCoeffs.at<double>(4,0) = 1.26044448534097;
 
 	Mat cameraMatrix2(3,3,CV_64F), distCoeffs2(1,5,CV_64F);
-	cameraMatrix2.at<double>(0,0) = 6.9332526624253353e+02;
-	cameraMatrix2.at<double>(0,1) = 0.;
-	cameraMatrix2.at<double>(0,2) = 2.9322521936992302e+02;
-	cameraMatrix2.at<double>(1,0) = 0.;
-	cameraMatrix2.at<double>(1,1) = 7.0206548894894274e+02;
-	cameraMatrix2.at<double>(1,2) = 2.1517298545590140e+02;
-	cameraMatrix2.at<double>(2,0) = 0.;
-	cameraMatrix2.at<double>(2,1) = 0.;
-	cameraMatrix2.at<double>(2,2) = 1.;
-	distCoeffs2.at<double>(0,0) = 1.5826748207215535e-01;
-	distCoeffs2.at<double>(1,0) = 3.3513300662473128e-01;
-	distCoeffs2.at<double>(2,0) = 2.7193440572564974e-02;
-	distCoeffs2.at<double>(3,0) = -8.7146222209221226e-03;
-	distCoeffs2.at<double>(4,0) = -4.1097722303957314e+00;
+	// cameraMatrix2.at<double>(0,0) = 6.9332526624253353e+02;
+	// cameraMatrix2.at<double>(0,1) = 0.;
+	// cameraMatrix2.at<double>(0,2) = 2.9322521936992302e+02;
+	// cameraMatrix2.at<double>(1,0) = 0.;
+	// cameraMatrix2.at<double>(1,1) = 7.0206548894894274e+02;
+	// cameraMatrix2.at<double>(1,2) = 2.1517298545590140e+02;
+	// cameraMatrix2.at<double>(2,0) = 0.;
+	// cameraMatrix2.at<double>(2,1) = 0.;
+	// cameraMatrix2.at<double>(2,2) = 1.;
+	// distCoeffs2.at<double>(0,0) = 1.5826748207215535e-01;
+	// distCoeffs2.at<double>(1,0) = 3.3513300662473128e-01;
+	// distCoeffs2.at<double>(2,0) = 2.7193440572564974e-02;
+	// distCoeffs2.at<double>(3,0) = -8.7146222209221226e-03;
+	// distCoeffs2.at<double>(4,0) = -4.1097722303957314e+00;
 
 	if (!ardrone.open())
 	{
@@ -143,30 +145,24 @@ int main(int argc, char *argv[])
 	bool flags[5] = {false};
 	int index[5] = {0};
 	int state = 0;
+	int face_state = 0;
 	int final_cnt = 0;
 	memset(flags, false, sizeof(flags));
 
 
 	unsigned long long int counter = 0;
+	unsigned long long int face_counter = 0;
 	unsigned long long int landing_counter = 0;
 
-
+	// cout << "Face detection test "<< endl;
 	while(1)
 	{
 		int key = waitKey(33);
 		if (key == 0x1b) break;
-		VideoCapture cap(0);
-		cap >> image;
-		// image = ardrone.getImage();
-		face_cascade.detectMultiScale( image, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30) );
-		for( int i = 0; i < faces.size(); i++ )
-	    {
-	        Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
-	        ellipse( image, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
-			printf("Find %d faces, face width %d, face height %d \n",faces.size() ,faces[i].width , faces[i].height);
-	    }
-	    // namedWindow("Detected Face", 0);
-	    imshow( "Detected Face", image );
+		// VideoCapture cap(0);
+		// cap >> image;
+		image = ardrone.getImage();
+
 	}
 	getchar();
 	while (1)
@@ -200,13 +196,24 @@ int main(int argc, char *argv[])
 
 		// Change camera
 		static int mode = 0;
+
 		if (key == 'c') ardrone.setCamera(++mode % 4);
 
 		if (key == 255)
 		{
-			//---------------------------------Main part of market detection----------------------------------------------//
+			//---------------------------------Main part of marker detection----------------------------------------------//
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
 			//cout << "State now: " << state << endl;
+			face_cascade.detectMultiScale( image, faces, 1.1, 5, CV_HAAR_SCALE_IMAGE, Size(30, 30) );
+			printf("Face size %d\n", faces.size());
+			for( int i = 0; i < faces.size(); i++ )
+		    {
+		        Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
+		        ellipse( image, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
+				printf("Find %d faces, face width %d, face height %d \n",faces.size() ,faces[i].width , faces[i].height);
+		    }
+		    // namedWindow("Detected Face", 0);
+		    imshow( "Detected Face", image );
 			if(ardrone.onGround())
 			{
 				state = 0;
