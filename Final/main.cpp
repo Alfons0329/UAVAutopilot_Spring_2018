@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
 			}
 			//---------------------------------------missions-----------------------------------------//
 			//--------------------------------------face part (priority higher than state)-----------//
-			if(faces.size() && face_state == 0 && faces_width > 120 && faces_height > 120)
+			if(faces.size() && face_state == 0 && face_width > 120 && face_height > 120)
 			{
 				cout << "Find a face ! close enough, fly right " << endl;
 				face_state = 1;
