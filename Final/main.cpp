@@ -171,6 +171,8 @@ int main(int argc, char *argv[])
 		        Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
 		        ellipse( image, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
 				printf("Find %d faces, face width %d, face height %d \n",faces.size() ,faces[i].width , faces[i].height);
+				face_width = max(faces[i].width, face_width);// update the max face size for only one face is accepted
+				face_height = max(faces[i].height, face_height); // update the max face size for only one face is accepted
 		    }
 
 			if(ardrone.onGround())
@@ -224,7 +226,7 @@ int main(int argc, char *argv[])
 			}
 			//---------------------------------------missions-----------------------------------------//
 			//--------------------------------------face part (priority higher than state)-----------//
-			if(faces.size() && face_state == 0 && faces[i].width > 120 && faces[i].height > 120)
+			if(faces.size() && face_state == 0 && faces_width > 120 && faces_height > 120)
 			{
 				cout << "Find a face ! close enough, fly right " << endl;
 				face_state = 1;
@@ -410,7 +412,7 @@ int main(int argc, char *argv[])
 					{
 						if(ids.size())
 						{
-							cout << "Default 4"<<endl;*
+							cout << "Default 4"<<endl;
 							vx = 0.32;
 							vr = 0;
 						}
