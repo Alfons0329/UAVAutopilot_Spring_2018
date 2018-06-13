@@ -116,14 +116,17 @@ int main(int argc, char *argv[])
 	//-----------------------flying data structure init---------------------------------------//
 	bool flags[5] = {false}; //Alfons: should fix this one ??
 	int index[5] = {0}; //Alfons: should fix this one ??
-
-	int state = 0;
-	int face_state = 0;
 	memset(flags, false, sizeof(flags));
-
+	//----------------------aruco markers part-----------------------------------------------//
+	int state = 0;
+	unsigned int final_vote_cnt = 0;
 	unsigned long long int counter = 0;
-	unsigned long long int face_counter = 0;
 	unsigned long long int landing_counter = 0;
+
+	int face_state = 0;
+	int face_width = 0, face_height = 0;
+	unsigned long long int face_counter = 0;
+
 
 	while (1)
 	{
@@ -248,7 +251,7 @@ int main(int argc, char *argv[])
 					face_counter = 0;
 				}
 			}
-			else if(face_state == 3 &7 face_counter <= 20)
+			else if(face_state == 3 && face_counter <= 20)
 			{
 				vy = 0.15;
 				face_counter++;
@@ -367,8 +370,8 @@ int main(int argc, char *argv[])
 			else if(state == 6 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance + 25 && flags[3] == true) //慢慢接近終點
 			{
 				cout << "If block 12"<<endl;
-				final_cnt++;
-				if(final_cnt >= 3)
+				final_vote_cnt++;
+				if(final_vote_cnt >= 3)
 				{
 					cout << "Chamge camera !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------   " <<endl;
 					ardrone.setCamera(++mode % 4);
@@ -407,7 +410,7 @@ int main(int argc, char *argv[])
 					{
 						if(ids.size())
 						{
-							cout << "Default 4"<<endl;
+							cout << "Default 4"<<endl;*
 							vx = 0.32;
 							vr = 0;
 						}
