@@ -47,6 +47,7 @@ int load_camera_param(string filename_in, Mat& cameraMatrix, Mat& distCoeffs)
 	fs["distortion"] >> distCoeffs;
 	if((int)(cameraMatrix.at<double>(0 ,0)) == 0) //fake read file
 	{
+		cout << "Read XML failed !! " << endl;
 		return 0;
 	}
 	fs.release();
@@ -72,45 +73,17 @@ int main(int argc, char *argv[])
 	Mat cameraMatrix(3,3,CV_64F), distCoeffs(1,5,CV_64F);
 	load_camera_param("ardrone_config.xml",cameraMatrix , distCoeffs);
 	cout << "cameraMatrix " <<cameraMatrix << " \n " << distCoeffs << "--------------------- \n";
-	// cameraMatrix.at<double>(0,0) = 5.660229527130537e+02;
-	// cameraMatrix.at<double>(0,1) = 0.;
-	// cameraMatrix.at<double>(0,2) = 3.340570397444376e+02;
-	// cameraMatrix.at<double>(1,0) = 0.;
-	// cameraMatrix.at<double>(1,1) = 5.664897255182701e+02;
-	// cameraMatrix.at<double>(1,2) = 1.690819574644224e+02;
-	// cameraMatrix.at<double>(2,0) = 0.;
-	// cameraMatrix.at<double>(2,1) = 0.;
-	// cameraMatrix.at<double>(2,2) = 1.;
-	// distCoeffs.at<double>(0,0) = -5.060402671581601e-01;
-	// distCoeffs.at<double>(1,0) = 2.940530016423599e-02;
-	// distCoeffs.at<double>(2,0) = 1.774436061695057e-04;
-	// distCoeffs.at<double>(3,0) = -3.99927841858243e-03;
-	// distCoeffs.at<double>(4,0) = 1.26044448534097;
 
 	Mat cameraMatrix2(3,3,CV_64F), distCoeffs2(1,5,CV_64F);
-	// cameraMatrix2.at<double>(0,0) = 6.9332526624253353e+02;
-	// cameraMatrix2.at<double>(0,1) = 0.;
-	// cameraMatrix2.at<double>(0,2) = 2.9322521936992302e+02;
-	// cameraMatrix2.at<double>(1,0) = 0.;
-	// cameraMatrix2.at<double>(1,1) = 7.0206548894894274e+02;
-	// cameraMatrix2.at<double>(1,2) = 2.1517298545590140e+02;
-	// cameraMatrix2.at<double>(2,0) = 0.;
-	// cameraMatrix2.at<double>(2,1) = 0.;
-	// cameraMatrix2.at<double>(2,2) = 1.;
-	// distCoeffs2.at<double>(0,0) = 1.5826748207215535e-01;
-	// distCoeffs2.at<double>(1,0) = 3.3513300662473128e-01;
-	// distCoeffs2.at<double>(2,0) = 2.7193440572564974e-02;
-	// distCoeffs2.at<double>(3,0) = -8.7146222209221226e-03;
-	// distCoeffs2.at<double>(4,0) = -4.1097722303957314e+00;
 
 	if (!ardrone.open())
 	{
 		cout << "Failed to initialize." << endl;
-		// return -1;
+		return -1;
 	}
 
 	// Battery
-	// cout << "Battery = " << ardrone.getBatteryPercentage() << "[%]" << endl;
+	cout << "Battery = " << ardrone.getBatteryPercentage() << "[%]" << endl;
 
 	// Instructions
 	cout << "***************************************" << endl;
@@ -140,31 +113,18 @@ int main(int argc, char *argv[])
 	//-----------------------done data structure init------------------------------------------//
 	//
 	PIDManager myPID("pid.yaml");
-	// getchar();// stop a while for changing paper lololol
 	//-----------------------flying data structure init---------------------------------------//
-	bool flags[5] = {false};
-	int index[5] = {0};
+	bool flags[5] = {false}; //Alfons: should fix this one ??
+	int index[5] = {0}; //Alfons: should fix this one ??
+
 	int state = 0;
 	int face_state = 0;
-	int final_cnt = 0;
 	memset(flags, false, sizeof(flags));
-
 
 	unsigned long long int counter = 0;
 	unsigned long long int face_counter = 0;
 	unsigned long long int landing_counter = 0;
 
-	// cout << "Face detection test "<< endl;
-	while(1)
-	{
-		int key = waitKey(33);
-		if (key == 0x1b) break;
-		// VideoCapture cap(0);
-		// cap >> image;
-		image = ardrone.getImage();
-
-	}
-	getchar();
 	while (1)
 	{
 		// Key input
@@ -193,36 +153,33 @@ int main(int argc, char *argv[])
 		if (key == 'a') vz = -1.0;
 		if (key == 'f') state = 5;
 
-
 		// Change camera
-		static int mode = 0;
+		int mode = 0;
 
 		if (key == 'c') ardrone.setCamera(++mode % 4);
 
 		if (key == 255)
 		{
-			//---------------------------------Main part of marker detection----------------------------------------------//
+			//------------------------------face detection------------------------------------------//
 			aruco::detectMarkers(image, dictionary, aruco_corners, ids);
-			//cout << "State now: " << state << endl;
 			face_cascade.detectMultiScale( image, faces, 1.1, 5, CV_HAAR_SCALE_IMAGE, Size(30, 30) );
-			printf("Face size %d\n", faces.size());
 			for( int i = 0; i < faces.size(); i++ )
 		    {
 		        Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
 		        ellipse( image, center, Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
 				printf("Find %d faces, face width %d, face height %d \n",faces.size() ,faces[i].width , faces[i].height);
 		    }
-		    // namedWindow("Detected Face", 0);
-		    imshow( "Detected Face", image );
+
 			if(ardrone.onGround())
 			{
 				state = 0;
 			}
+			//------------------------------------debug output zone----------------------------------//
 			if(ids.size())
 			{
 				cout << "See marker: ";
 			}
-			for (int j = 0; j < ids.size(); j++)
+			for (int j = 0; j < ids.size(); j++) //Alfons: should fix this one ??
 			{
 				flags[ids[j]-1] = true;
 				cout << " , " << ids[j] << endl;
@@ -233,6 +190,7 @@ int main(int argc, char *argv[])
 				cout << "SEE MARKER END " << endl;
 			}
 
+			//---------------------------------Main part of marker detection----------------------------------------------//
 			vector<Vec3d> rvecs, tvecs;
 			if (ids.size() > 0)
 			{
@@ -248,7 +206,7 @@ int main(int argc, char *argv[])
 						cout << "rvec 0 2 = " << rvecs[0][2] << endl; //x,y,z in the space
 					}
 				}
-				else if(mode == 1)
+				else if(mode == 1) //landing
 				{
 					aruco::drawDetectedMarkers(image, aruco_corners, ids);
 					aruco::estimatePoseSingleMarkers(aruco_corners, markerLength, cameraMatrix2, distCoeffs2, rvecs, tvecs);
@@ -262,14 +220,53 @@ int main(int argc, char *argv[])
 				}
 			}
 			//---------------------------------------missions-----------------------------------------//
-			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
-
-			if(state == 0)
+			//--------------------------------------face part (priority higher than state)-----------//
+			if(faces.size() && face_state == 0 && faces[i].width > 120 && faces[i].height > 120)
+			{
+				cout << "Find a face ! close enough, fly right " << endl;
+				face_state = 1;
+			}
+			else if(face_state == 1 && face_counter <= 20)
+			{
+				vy = -0.15;
+				face_counter++;
+				cout << "Fly right of the face " << endl;
+				if(face_counter == 20)
+				{
+					face_state = 2;
+					face_counter = 0;
+				}
+			}
+			else if(face_state == 2 && face_counter <= 10)
+			{
+				vx = 0.15;
+				face_counter++;
+				cout << "Fly straight of the face " << endl;
+				if(face_counter == 10)
+				{
+					face_state = 3;
+					face_counter = 0;
+				}
+			}
+			else if(face_state == 3 &7 face_counter <= 20)
+			{
+				vy = 0.15;
+				face_counter++;
+				cout << "Fly left of the face " << endl;
+				if(face_counter == 20)
+				{
+					face_state = 0;
+					face_counter = 0;
+				}
+			}
+			else if(state == 0)//---------------------------------------marker part-------------------------------------//
 			{
 				// cout << " If block 0" <<endl;
 				vx = 0;
 				vy = 0;
-				vr = 0.12; //Self rotate till id1 is seen 正是逆時針，負是順時針
+				// vr = 0.12; //Self rotate till id1 is seen 正是逆時針，負是順時針
+				// 2018/6/13 debug using vr = 0;
+				vr = 0; //Alfons: should fix this one ??
 				if(flags[0] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.7) //看到一 進入狀態一
 				{
 					state = 1;
@@ -314,14 +311,6 @@ int main(int argc, char *argv[])
 				vr = 0;
 				state = 3; //進入狀態三
 			}
-			//--------------------------------------可以飛越id1並且航向id2 單元測試-----------------------//
-			//--------------------------------------可以飛越id1並且航向id2 單元測試成功 2018/5/7 20:54-----------------------//
-			/* 5/8 代辦事項
-			1.確認vr 正負號與旋轉的方向，往正確的方向轉可以節省許多時間
-			2.把剩下的單元測試跑完
-			3.校正landing的下相機 用lab5已經寫好的code直接校正即可
-			*/
-			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			else if(state == 3) //停在id二前面而且看不到id三 就自轉，向右轉會比較快
 			{
 				cout << "If block 6"<<endl;
@@ -466,24 +455,8 @@ int main(int argc, char *argv[])
 		}
 		printf("vx : %f vy : %f vr %f\n", vx, vy, vr);
 		ardrone.move3D(vx, vy, vz, vr);
-		// Display the image
-		// imshow("camera", image);
 	}
 	// See you
 	ardrone.close();
 	return 0;
 }
-/*if(state == 0)
-{
-	vr = -0.4; //Self rotate till id1 is seen
-	if(flags[0]) //看到一 進入狀態一
-	{
-		state = 1;
-	}
-}
-else if(state == 1 && flags[0]) //看到一 朝它飛過去，目前都是看得到一的狀態
-{
-	cout << "If block 2 "<<endl;
-	vx = 0.5;
-	vy = -( fabs(tvecs[0][0]) / fabs(tvecs[0][2]) ) * vx;
-}*/
