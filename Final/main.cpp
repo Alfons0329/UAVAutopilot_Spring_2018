@@ -33,6 +33,7 @@ const int vr_amp = 20;
 //------------------velocity amplification and disamplification ends here---------//
 //------------------first_counter--------------------------------------------------//
 const int first_counter = 60;
+const int second_counter = 40;
 //------------------face dodge counter--------------------------------------------//
 const int face_lr = 40;
 const int face_st = 60;
@@ -143,6 +144,7 @@ int main(int argc, char *argv[])
 	while (1)
 	{
 		// Key input
+		cout << "State now " << state << endl;
 		int key = waitKey(33);
 		if (key == 0x1b) break;
 
@@ -284,7 +286,7 @@ int main(int argc, char *argv[])
 					state++; //614 代表飛完人臉了，然後回來，我們這個時候的位置會夾在人臉和marker2之間
 					cout << "Finish face dodge !" <<endl;
 					// getchar();
-					ardrone.landing();
+					// ardrone.landing();
 				}
 			}
 			//---------------------------------------marker part-------------------------------------//
@@ -329,9 +331,9 @@ int main(int argc, char *argv[])
 					state = 2;
 				}
 			}
-			else if(state == 2) //state = 2 代表朝人臉飛過去(還沒有要進行人臉躲避障礙誤)。
+			else if(state == 2 || state == 7) //state = 2 代表朝人臉飛過去(還沒有要進行人臉躲避障礙誤)。
 			{
-				cout << "Fly closer to the face " <<endl;
+				cout << "Fly closer to the face " << endl;
 				vx = 0.13;
 				if(face_x <= ( image.cols / 2 ) - 50)
 				{
@@ -399,8 +401,8 @@ int main(int argc, char *argv[])
 				cout << "If block 9 "<<endl;
 				vx = 0;
 				vy = 0;
-				vr = -0.2; //Self rotate till id4 is seen
-				if(flags[3] && rvecs[0][2] < 0.4 && rvecs[0][2] > -0.4) //看到四 此時也能矯正方向
+				vr = 0.12; //Self rotate till id4 is seen
+				if(flags[20] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.7) //看到四 此時也能矯正方向 620
 				{
 					state = 7;
 				}
