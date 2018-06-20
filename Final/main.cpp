@@ -36,7 +36,7 @@ const int first_counter = 60;
 const int second_counter = 40;
 //------------------face dodge counter--------------------------------------------//
 const int face_lr = 40;
-const int face_st = 60;
+const int face_st = 70;
 //------------------face width define---------------------------------------------//
 const int face_width_todo = 60;
 //------------------error bounds--------------------------------------------------//
@@ -283,7 +283,14 @@ int main(int argc, char *argv[])
 				{
 					face_state = 0;
 					face_counter = 0;
-					state++; //614 代表飛完人臉了，然後回來，我們這個時候的位置會夾在人臉和marker2之間
+					if(state < 3) //620
+					{
+						state = 3;
+					}
+					else if(state > 3 && state < 10)
+					{
+						state = 10;
+					}
 					cout << "Finish face dodge !" <<endl;
 					// getchar();
 					// ardrone.landing();
