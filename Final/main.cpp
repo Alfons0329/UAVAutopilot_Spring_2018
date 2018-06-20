@@ -331,9 +331,9 @@ int main(int argc, char *argv[])
 					state = 2;
 				}
 			}
-			else if(state == 2 || state == 7) //state = 2 代表朝人臉飛過去(還沒有要進行人臉躲避障礙誤)。
+			else if(state == 2 || state == 9) //state = 2 代表朝人臉飛過去(還沒有要進行人臉躲避障礙誤)。
 			{
-				cout << "Fly closer to the face " << endl;
+				cout << "Fly closer to the face !!" << endl;
 				vx = 0.13;
 				if(face_x <= ( image.cols / 2 ) - 50)
 				{
@@ -402,28 +402,59 @@ int main(int argc, char *argv[])
 				vx = 0;
 				vy = 0;
 				vr = 0.12; //Self rotate till id4 is seen
-				if(flags[20] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.7) //看到四 此時也能矯正方向 620
+				if(flags[20] && rvecs[0][2] < 0.82 && rvecs[0][2] > -0.7) //看到21 此時也能矯正方向 620
 				{
+					counter = 0;
 					state = 7;
+					cout << "See 21 marker !! " << endl;
 				}
 			}
 			//--------------------------------------可以轉向並且飛id2 3 4 單元測試-----------------------//
 			//--------------------------------------降落 單元測試--------------------------------------//
-			else if(state == 7 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 30 && flags[3] == true)
+			else if(state == 7 && counter < second_counter) //看到21後 飛一些counter 超越它，並且航向人臉，邏輯跟之前的一樣620
+			{
+				cout << "If block 9 - 2" << endl;
+				cout << "Counter" << counter++ << endl;
+				vx = 0.4;
+				vy = -0.09;
+				vr = 0;
+				if(counter >= second_counter)
+				{
+					state = 8; //飛完counter後，就進入狀態八，代表持續搜索人臉貼近人臉（見下 620
+					counter = 0xFFFFFFFF;
+				}
+			}
+			else if(state == 8) //原地旋轉跟之前一樣，看到人臉並且矯正方向。620
+			{
+				cout << "If block 9-3 searching for face"<<endl;
+				if(faces.size())
+				{
+					cout << "Face exists !!!! image cols: " << image.cols << "face_XX " <<face_x << "face_YY" <<face_y << endl;
+				}
+				vx = 0;
+				vy = 0;
+				vr = 0.13; //Self rotate till id2 is seen
+				if(faces.size() && face_x > ( image.cols / 2 ) - 80 && face_x < ( image.cols / 2 ) + 80) //找人臉並且矯正方向 620
+				{
+					cout << "Next state " <<endl;
+					state = 9;
+				}
+			}
+			else if(state == 10 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 30 && flags[3] == true) //飛完人臉要到最後了，邏輯跟之前差不多 620
 			{
 				cout << "If block 10 "<<endl;
 				vx = 0.32;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 7 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 25 && tvecs[index[3]][2] <= required_distance + 30 && flags[3] == true) //因為慣性，要遠一點
+			else if(state == 10 && ids.size() > 0 && tvecs[index[3]][2] > required_distance + 25 && tvecs[index[3]][2] <= required_distance + 30 && flags[3] == true) //因為慣性，要遠一點
 			{
 				cout << "If block 11 "<<endl;
 				vx = 0.18;
 				vy = 0;
 				vr = 0;
 			}
-			else if(state == 7 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance + 25 && flags[3] == true) //慢慢接近終點
+			else if(state == 10 && ids.size() > 0 && tvecs[index[3]][2] <= required_distance + 25 && flags[3] == true) //慢慢接近終點
 			{
 				cout << "If block    "<<endl;
 				final_vote_cnt++;
@@ -431,7 +462,7 @@ int main(int argc, char *argv[])
 				{
 					cout << "Chamge camera !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!-----------   " <<endl;
 					ardrone.setCamera(++mode % 4);
-					state = 8;
+					state = 11;
 					ids.resize(0);
 				}
 				else
@@ -441,7 +472,7 @@ int main(int argc, char *argv[])
 					vr = 0;
 				}
 			}
-			else if(state == 8) //final landing
+			else if(state == 11) //final landing
 			{
 				cout << " Landinmg counter "<< landing_counter <<endl;
 				if(flags[4] == true || landing_counter == 400)
