@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <stdio.h>
 #include <vector>
-#include <string>>
+#include <string>
 
 #define PAT_ROWS   (6)                  // Rows of pattern
 #define PAT_COLS   (9)                 // Columns of pattern
@@ -36,7 +36,7 @@ const int first_counter = 60;
 const int second_counter = 40;
 //------------------face dodge counter--------------------------------------------//
 const int face_lr = 40;
-const int face_st = 70;
+const int face_st = 80;
 //------------------face width define---------------------------------------------//
 const int face_width_todo = 60;
 //------------------error bounds--------------------------------------------------//
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 			else if(state && face_state == 2 && face_counter <= face_st)//614
 			{
 				vy = 0;
-				vx = 0.2;
+				vx = 0.4;
 				face_counter++;
 				cout << "Fly straight of the face face_counter" <<face_counter << endl;
 				if(face_counter == face_st)
@@ -500,32 +500,32 @@ int main(int argc, char *argv[])
 			{
 				switch(state)
 				{
-					case 4:
+					case 5:
 					{
 						if(ids.size())
 						{
-							cout << "Default 4"<<endl;
+							cout << "Default 5"<<endl;
 							vx = 0.32;
 							vr = 0;
 						}
 						else
 						{
 							vx = 0;
-							cout << "Default 4 else"<<endl;
+							cout << "Default 5 else"<<endl;
 						}
 						break;
 					}
-					case 6:
+					case 10:
 					{
 						if(ids.size())
 						{
-							cout << "Default 6"<<endl;
+							cout << "Default 10"<<endl;
 							vx = 0.32;
 							vr = 0;
 						}
 						else
 						{
-							cout << "Default 6 else"<<endl;
+							cout << "Default 10 else"<<endl;
 							vx = 0;
 						}
 						break;
@@ -536,7 +536,7 @@ int main(int argc, char *argv[])
 						{
 							vr = -0.15;
 						}
-						else if (state == 1)
+						else if (state == 1 || state == 3)
 						{
 							vr = -0.15;
 						}
