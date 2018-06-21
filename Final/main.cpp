@@ -32,7 +32,7 @@ const int vz_amp = 1000;
 const int vr_amp = 20;
 //------------------velocity amplification and disamplification ends here---------//
 //------------------first_counter--------------------------------------------------//
-const int first_counter = 60;
+const int first_counter = 62;
 const int second_counter = 40;
 //------------------face dodge counter--------------------------------------------//
 const int face_lr = 40;
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 			//---------------------------------------marker part-------------------------------------//
 			else if(state == 0) //最一剛開始
 			{
-				cout << " If block 0" <<endl;
+				cout << "If block 0" <<endl;
 				vx = 0;
 				vy = 0;
 				vr = 0.12; //Self rotate till id1 is seen 正是逆時針，負是順時針
@@ -313,8 +313,8 @@ int main(int argc, char *argv[])
 			{
 				cout << "If block 1 "<<endl;
 				cout << "Counter " << counter++ << endl;
-				vx = 0.4;
-				vy = -0.09;//- (0.8 / 4.0f) * 1;
+				vx = 0.33;
+				vy = -0.06;//- (0.8 / 4.0f) * 1;
 				vr = 0;
 				if(counter >= first_counter) //counter with trial and error
 				{
@@ -481,7 +481,7 @@ int main(int argc, char *argv[])
 			}
 			else if(state == 11) //final landing
 			{
-				cout << " Landinmg counter "<< landing_counter <<endl;
+				cout << " Landing counter "<< landing_counter <<endl;
 				if(flags[4] == true || landing_counter == 400)
 				{
 					cout << "Real landing "<<landing_counter << " ids size " << ids.size() <<endl;
